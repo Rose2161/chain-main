@@ -16,7 +16,7 @@ pytestmark = pytest.mark.ibc
 def cluster(worker_index, pytestconfig, tmp_path_factory):
     "override cluster fixture for this test module"
     yield from cluster_fixture(
-        Path(__file__).parent / "configs/ibc_channel_genesis.yaml",
+        Path(__file__).parent / "configs/ibc_channel_genesis.jsonnet",
         worker_index,
         tmp_path_factory.mktemp("data"),
     )
@@ -26,13 +26,13 @@ def create_ibc_client(data_root, dst_chain, src_chain):
     subprocess.run(
         [
             "hermes",
-            "-j",
-            "-c",
+            "--config",
             data_root / "relayer.toml",
-            "tx",
-            "raw",
-            "create-client",
+            "create",
+            "client",
+            "--host-chain",
             dst_chain,
+            "--reference-chain",
             src_chain,
         ],
         check=True,
