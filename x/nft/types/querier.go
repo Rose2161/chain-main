@@ -1,5 +1,5 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package types
 
 // DONTCOVER
@@ -44,7 +44,7 @@ type QueryOwnerParams struct {
 	Owner sdk.AccAddress
 }
 
-// NewQuerySupplyParams creates a new instance of QuerySupplyParams
+// NewQueryOwnerParams creates a new instance of QueryOwnerParams
 func NewQueryOwnerParams(denom string, owner sdk.AccAddress) QueryOwnerParams {
 	return QueryOwnerParams{
 		Denom: denom,

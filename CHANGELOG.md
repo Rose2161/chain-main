@@ -1,5 +1,20 @@
 # Changelog
 
+## UNRELEASED
+
+- [#1023](https://github.com/crypto-org-chain/chain-main/pull/1023) Integrate sdk 0.47
+- [#1044](https://github.com/crypto-org-chain/chain-main/pull/1044) Revert the protobuf package name changes introduced in #1023.
+- [#1060](https://github.com/crypto-org-chain/chain-main/pull/1060) Upgrade rocksdb to `v9.2.1` and bump versiondb.
+- [#1061](https://github.com/crypto-org-chain/chain-main/pull/1061) Integrate sdk 0.50.
+- [#1068](https://github.com/crypto-org-chain/chain-main/pull/1068) Upgrade ibc-go to `v8.3.2` and remove icaauth module.
+- [#1084](https://github.com/crypto-org-chain/chain-main/pull/1084) Add MsgModuleQuerySafe in allowed messages for ica host param.
+- [#1086](https://github.com/crypto-org-chain/chain-main/pull/1086) Upgrade ibc-go to `v8.4.0`.
+- [#1087](https://github.com/crypto-org-chain/chain-main/pull/1087) Ensure expedited related gov params pass the basic validation.
+- [#1088](https://github.com/crypto-org-chain/chain-main/pull/1088) Upgrade solomachine to `v0.1.4` and ibc-go to `v8.5.1`.
+* [#1091](https://github.com/crypto-org-chain/chain-main/pull/1091) Update cometbft to `0.38.13`, sdk to `v0.50.10` and memiavl to latest.
+- [#1091](https://github.com/crypto-org-chain/chain-main/pull/1091) Upgrade cometbft to v0.38.13, cosmos-sdk to `v0.50.10`.
+- [#1099](https://github.com/crypto-org-chain/chain-main/pull/1099) Avoid negative coin amount error when query supply liquid of non BaseCoinUnit.
+
 *Dec 6, 2023*
 
 ## v4.2.8
@@ -127,7 +142,7 @@ A small fix on top of `v4.0.0` and upgrade to Cosmos SDK v0.46.4.
 
 ## v4.0.0
 
-This is the release of Crypto.org Chain's `v4.0.0`. It contains following changes (when compared with `v3`):
+This is the release of Cronos.org Chain's `v4.0.0`. It contains following changes (when compared with `v3`):
 
 ## Added
 
@@ -210,14 +225,14 @@ The upgraded Cosmos SDK version contains a fix for the upgrade non-determinism i
 that was discovered during upgrade testing.
 
 *WARNING*: DO NOT upgrade to this binary yet; instructions are going to be published later
-on https://crypto.org/docs/getting-started/upgrade_guide.html .
+on https://docs.cronos.org/
 
 *September 7, 2021*
 
 ## v3.1.1
 This version is identical to the v3.1.0, but updated the ibc-go dependency to 1.1.0.
 *WARNING*: DO NOT upgrade to this binary yet; instructions are going to be published later
-on https://crypto.org/docs/getting-started/upgrade_guide.html .
+on https://docs.cronos.org/
 
 
 *September 2, 2021*
@@ -225,14 +240,14 @@ on https://crypto.org/docs/getting-started/upgrade_guide.html .
 ## v3.1.0
 This version is identical to the v3.0.1, but updated the Cosmos SDK dependency to 0.44.0 which contains a consensus-breaking security patch.
 *WARNING*: DO NOT upgrade to this binary yet; instructions are going to be published later
-on https://crypto.org/docs/getting-started/upgrade_guide.html .
+on https://docs.cronos.org/
 
 *August 26, 2021*
 
 ## v3.0.1
 This version is identical to the v3.0.0, but updated the IBC dependency to 1.0.1 which contains a security patch.
 *WARNING*: DO NOT upgrade to this binary yet; instructions are going to be published later
-on https://crypto.org/docs/getting-started/upgrade_guide.html .
+on https://docs.cronos.org/
 
 *August 23, 2021*
 
@@ -243,7 +258,7 @@ and breaking changes. For more details, please see the [Cosmos SDK](https://gith
 and [ibc-go](https://github.com/cosmos/ibc-go/releases/tag/v1.0.0) release notes.
 In addition to that, it also uses Tendermint v0.34.12.
 *WARNING*: DO NOT upgrade to this binary yet; instructions are going to be published later
-on https://crypto.org/docs/getting-started/upgrade_guide.html .
+on https://docs.cronos.org/
 
 *August 6, 2021*
 
@@ -269,7 +284,7 @@ This version is based on Cosmos SDK 0.42.6 and Tendermint 0.34.11 which, among o
 ## v2.0.1
 This released version is the same as v2.0.0, but contains an upgrade-critical fix.
 NOTE that the upgrade plan name is still expected to be "v2.0.0".
-*WARNING*: please follow the upgrade instructions described here: https://crypto.org/docs/getting-started/upgrade_guide.html#the-canis-major-upgrade-guide-v1-to-v2-0-0
+*WARNING*: please follow the upgrade instructions described here: https://docs.cronos.org/for-node-hosts/running-nodes/cronos-mainnet
 
 ### Bug Fixes
 - [552](https://github.com/crypto-org-chain/chain-main/pull/552) NFT module store initialized after upgrade
@@ -278,7 +293,7 @@ NOTE that the upgrade plan name is still expected to be "v2.0.0".
 
 ## v2.0.0
 This pre-release version contains the scope of [ADR-003](https://github.com/crypto-org-chain/chain-main/blob/master/doc/architecture/adr-003.md) for the mainnet upgrade. It also upgrades to the latest version of Tendermint (0.34.10).
-*WARNING*: please follow the upgrade instructions described here: https://crypto.org/docs/getting-started/upgrade_guide.html#the-canis-major-upgrade-guide-v1-to-v2-0-0
+*WARNING*: please follow the upgrade instructions described here: https://docs.cronos.org/for-node-hosts/running-nodes/cronos-mainnet/the-v1.2-upgrade-guide-v1.1.-to-v1.2.0
 
 ### Breaking changes
 - [516](https://github.com/crypto-org-chain/chain-main/pull/516) NFT module added

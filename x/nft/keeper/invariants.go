@@ -1,5 +1,5 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package keeper
 
 // DONTCOVER
@@ -32,7 +32,6 @@ func SupplyInvariant(k Keeper) sdk.Invariant {
 		count := 0
 
 		owners, err := k.GetOwners(ctx)
-
 		if err != nil {
 			return sdk.FormatInvariant(types.ModuleName, "supply", "unable to fetch owners"), true
 		}

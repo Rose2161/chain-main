@@ -1,5 +1,5 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package keeper
 
 import (
@@ -52,7 +52,6 @@ func (m msgServer) IssueDenom(goCtx context.Context, msg *types.MsgIssueDenom) (
 }
 
 // TODO: remove duplicate code in `MintNFT` and `EditNFT`
-// nolint: dupl
 func (m msgServer) MintNFT(goCtx context.Context, msg *types.MsgMintNFT) (*types.MsgMintNFTResponse, error) {
 	recipient, err := sdk.AccAddressFromBech32(msg.Recipient)
 	if err != nil {

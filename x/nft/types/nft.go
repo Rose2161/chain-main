@@ -1,5 +1,5 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package types
 
 import (
@@ -36,7 +36,6 @@ func (bnft BaseNFT) GetName() string {
 // GetOwner return the owner of BaseNFT
 func (bnft BaseNFT) GetOwner() sdk.AccAddress {
 	owner, err := sdk.AccAddressFromBech32(bnft.Owner)
-
 	if err != nil {
 		panic(fmt.Errorf("couldn't convert %q to account address: %v", bnft.Owner, err))
 	}
