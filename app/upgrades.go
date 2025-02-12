@@ -1,125 +1,106 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"slices"
+	"time"
 
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	sdkmath "cosmossdk.io/math"
+	storetypes "cosmossdk.io/store/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/cosmos/cosmos-sdk/x/group"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	ica "github.com/cosmos/ibc-go/v5/modules/apps/27-interchain-accounts"
-	icacontrollertypes "github.com/cosmos/ibc-go/v5/modules/apps/27-interchain-accounts/controller/types"
-	icahosttypes "github.com/cosmos/ibc-go/v5/modules/apps/27-interchain-accounts/host/types"
-	icatypes "github.com/cosmos/ibc-go/v5/modules/apps/27-interchain-accounts/types"
-	ibcfeetypes "github.com/cosmos/ibc-go/v5/modules/apps/29-fee/types"
-	icaauthmoduletypes "github.com/crypto-org-chain/chain-main/v4/x/icaauth/types"
-	nfttransfertypes "github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/types"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
+	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 )
 
-func (app *ChainApp) RegisterUpgradeHandlers() {
-	planName := "v4.2.0"
-	app.UpgradeKeeper.SetUpgradeHandler(planName, func(ctx sdk.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-		// the minimal commission rate of 5% (0.05)
-		// (default is needed to be set because of SDK store migrations that set the param)
-		stakingtypes.DefaultMinCommissionRate = sdk.NewDecWithPrec(5, 2)
-
-		app.StakingKeeper.IterateValidators(ctx, func(index int64, val stakingtypes.ValidatorI) (stop bool) {
-			if val.GetCommission().LT(stakingtypes.DefaultMinCommissionRate) {
-				validator, found := app.StakingKeeper.GetValidator(ctx, val.GetOperator())
-				if !found {
-					ctx.Logger().Error("validator not found", val)
-					return true
-				}
-				ctx.Logger().Info("update validator's commission rate to a minimal one", val)
-				validator.Commission.Rate = stakingtypes.DefaultMinCommissionRate
-				if validator.Commission.MaxRate.LT(stakingtypes.DefaultMinCommissionRate) {
-					validator.Commission.MaxRate = stakingtypes.DefaultMinCommissionRate
-				}
-				app.StakingKeeper.SetValidator(ctx, validator)
+func (app *ChainApp) RegisterUpgradeHandlers(cdc codec.BinaryCodec) {
+	planName := "v5.0"
+	app.UpgradeKeeper.SetUpgradeHandler(planName, func(ctx context.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+		m, err := app.ModuleManager.RunMigrations(ctx, app.configurator, fromVM)
+		if err != nil {
+			return m, err
+		}
+		sdkCtx := sdk.UnwrapSDKContext(ctx)
+		{
+			params := app.ICAHostKeeper.GetParams(sdkCtx)
+			msg := "/ibc.applications.interchain_accounts.host.v1.MsgModuleQuerySafe"
+			if !slices.ContainsFunc(params.AllowMessages, func(allowMsg string) bool {
+				return allowMsg == "*" || allowMsg == msg
+			}) {
+				params.AllowMessages = append(params.AllowMessages, msg)
+				app.ICAHostKeeper.SetParams(sdkCtx, params)
 			}
-			return false
-		})
-
-		icaModule := app.mm.Modules[icatypes.ModuleName].(ica.AppModule)
-
-		// set the ICS27 consensus version so InitGenesis is not run
-		fromVM[icatypes.ModuleName] = icaModule.ConsensusVersion()
-
-		// create ICS27 Controller submodule params
-		controllerParams := icacontrollertypes.Params{
-			ControllerEnabled: false,
+			if err := UpdateExpeditedParams(ctx, app.GovKeeper); err != nil {
+				return m, err
+			}
 		}
-
-		// create ICS27 Host submodule params
-		hostParams := icahosttypes.Params{
-			HostEnabled: false,
-			AllowMessages: []string{
-				"/cosmos.authz.v1beta1.MsgExec",
-				"/cosmos.authz.v1beta1.MsgGrant",
-				"/cosmos.authz.v1beta1.MsgRevoke",
-				"/cosmos.bank.v1beta1.MsgSend",
-				"/cosmos.bank.v1beta1.MsgMultiSend",
-				"/cosmos.distribution.v1beta1.MsgSetWithdrawAddress",
-				"/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission",
-				"/cosmos.distribution.v1beta1.MsgFundCommunityPool",
-				"/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
-				"/cosmos.gov.v1beta1.MsgVoteWeighted",
-				"/cosmos.gov.v1beta1.MsgSubmitProposal",
-				"/cosmos.gov.v1beta1.MsgDeposit",
-				"/cosmos.gov.v1beta1.MsgVote",
-				"/cosmos.staking.v1beta1.MsgCreateValidator",
-				"/cosmos.staking.v1beta1.MsgEditValidator",
-				"/cosmos.staking.v1beta1.MsgDelegate",
-				"/cosmos.staking.v1beta1.MsgUndelegate",
-				"/cosmos.staking.v1beta1.MsgBeginRedelegate",
-				"/cosmos.staking.v1beta1.MsgCancelUnbondingDelegation",
-				"/cosmos.slashing.v1beta1.MsgUnjail",
-				"/ibc.applications.transfer.v1.MsgTransfer",
-				"/chainmain.nft_transfer.v1.MsgTransfer",
-				"/chainmain.nft.v1.MsgBurnNFT",
-				"/chainmain.nft.v1.MsgEditNFT",
-				"/chainmain.nft.v1.MsgIssueDenom",
-				"/chainmain.nft.v1.MsgMintNFT",
-				"/chainmain.nft.v1.MsgTransferNFT",
-			},
-		}
-
-		ctx.Logger().Info("start to init interchain account module...")
-
-		// initialize ICS27 module
-		icaModule.InitModule(ctx, controllerParams, hostParams)
-
-		ctx.Logger().Info("start to run module migrations...")
-
-		return app.mm.RunMigrations(ctx, app.configurator, fromVM)
-	})
-
-	// testnets need to do a coordinated upgrade to keep in sync with current mainnet version
-	testnetPlanName := "v4.2.7-testnet"
-	app.UpgradeKeeper.SetUpgradeHandler(testnetPlanName, func(ctx sdk.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-		return app.mm.RunMigrations(ctx, app.configurator, fromVM)
+		return m, nil
 	})
 
 	upgradeInfo, err := app.UpgradeKeeper.ReadUpgradeInfoFromDisk()
 	if err != nil {
 		panic(fmt.Sprintf("failed to read upgrade info from disk %s", err))
 	}
-
 	if upgradeInfo.Name == planName && !app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
 		storeUpgrades := storetypes.StoreUpgrades{
-			Added: []string{
-				group.ModuleName,
-				icacontrollertypes.StoreKey,
-				icahosttypes.StoreKey,
-				icaauthmoduletypes.StoreKey,
-				ibcfeetypes.StoreKey,
-				nfttransfertypes.StoreKey,
-			},
+			Deleted: []string{"icaauth"},
 		}
-
 		// configure store loader that checks if version == upgradeHeight and applies store upgrades
 		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
 	}
+}
+
+func UpdateExpeditedParams(ctx context.Context, gov govkeeper.Keeper) error {
+	govParams, err := gov.Params.Get(ctx)
+	if err != nil {
+		return err
+	}
+	if len(govParams.MinDeposit) > 0 {
+		minDeposit := govParams.MinDeposit[0]
+		expeditedAmount := minDeposit.Amount.MulRaw(govv1.DefaultMinExpeditedDepositTokensRatio)
+		govParams.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(minDeposit.Denom, expeditedAmount))
+	}
+	threshold, err := sdkmath.LegacyNewDecFromStr(govParams.Threshold)
+	if err != nil {
+		return fmt.Errorf("invalid threshold string: %w", err)
+	}
+	expeditedThreshold, err := sdkmath.LegacyNewDecFromStr(govParams.ExpeditedThreshold)
+	if err != nil {
+		return fmt.Errorf("invalid expedited threshold string: %w", err)
+	}
+	if expeditedThreshold.LTE(threshold) {
+		expeditedThreshold = threshold.Mul(DefaultThresholdRatio())
+	}
+	if expeditedThreshold.GT(sdkmath.LegacyOneDec()) {
+		expeditedThreshold = sdkmath.LegacyOneDec()
+	}
+	govParams.ExpeditedThreshold = expeditedThreshold.String()
+	if govParams.ExpeditedVotingPeriod != nil && govParams.VotingPeriod != nil && *govParams.ExpeditedVotingPeriod >= *govParams.VotingPeriod {
+		votingPeriod := DurationToDec(*govParams.VotingPeriod)
+		period := DecToDuration(DefaultPeriodRatio().Mul(votingPeriod))
+		govParams.ExpeditedVotingPeriod = &period
+	}
+	if err := govParams.ValidateBasic(); err != nil {
+		return err
+	}
+	return gov.Params.Set(ctx, govParams)
+}
+
+func DefaultThresholdRatio() sdkmath.LegacyDec {
+	return govv1.DefaultExpeditedThreshold.Quo(govv1.DefaultThreshold)
+}
+
+func DefaultPeriodRatio() sdkmath.LegacyDec {
+	return DurationToDec(govv1.DefaultExpeditedPeriod).Quo(DurationToDec(govv1.DefaultPeriod))
+}
+
+func DurationToDec(d time.Duration) sdkmath.LegacyDec {
+	return sdkmath.LegacyMustNewDecFromStr(fmt.Sprintf("%f", d.Seconds()))
+}
+
+func DecToDuration(d sdkmath.LegacyDec) time.Duration {
+	return time.Second * time.Duration(d.RoundInt64())
 }

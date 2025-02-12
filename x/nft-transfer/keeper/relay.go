@@ -2,14 +2,14 @@ package keeper
 
 import (
 	sdkerrors "cosmossdk.io/errors"
-	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	clienttypes "github.com/cosmos/ibc-go/v5/modules/core/02-client/types"
-	channeltypes "github.com/cosmos/ibc-go/v5/modules/core/04-channel/types"
-	host "github.com/cosmos/ibc-go/v5/modules/core/24-host"
-	coretypes "github.com/cosmos/ibc-go/v5/modules/core/types"
+	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
+	coretypes "github.com/cosmos/ibc-go/v8/modules/core/types"
 	"github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/types"
+	"github.com/hashicorp/go-metrics"
 )
 
 // SendTransfer handles nft-transfer sending logic.
@@ -89,7 +89,7 @@ func (k Keeper) SendTransfer(
 		return err
 	}
 
-	if err := k.ics4Wrapper.SendPacket(ctx, channelCap, packet); err != nil {
+	if _, err := k.ics4Wrapper.SendPacket(ctx, channelCap, sourcePort, sourceChannel, timeoutHeight, timeoutTimestamp, packet.GetData()); err != nil {
 		return err
 	}
 
@@ -131,7 +131,7 @@ func (k Keeper) OnRecvPacket(ctx sdk.Context, packet channeltypes.Packet,
 	return k.processReceivedPacket(ctx, packet, data)
 }
 
-// OnAcknowledgementPacket responds to the the success or failure of a packet
+// OnAcknowledgementPacket responds to the success or failure of a packet
 // acknowledgement written on the receiving chain. If the acknowledgement
 // was a success then nothing occurs. If the acknowledgement failed, then
 // the sender is refunded their tokens using the refundPacketToken function.

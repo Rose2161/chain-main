@@ -1,15 +1,15 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package keeper
 
 import (
 	"fmt"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 
 	sdkerrors "cosmossdk.io/errors"
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/crypto-org-chain/chain-main/v4/x/nft/types"
@@ -37,7 +37,8 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 // IssueDenom issues a denom according to the given params
 func (k Keeper) IssueDenom(ctx sdk.Context,
 	id, name, schema, uri string,
-	creator sdk.AccAddress) error {
+	creator sdk.AccAddress,
+) error {
 	return k.SetDenom(ctx, types.NewDenom(id, name, schema, uri, creator))
 }
 
