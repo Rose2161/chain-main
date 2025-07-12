@@ -96,7 +96,7 @@ jobs:
           submodules: true
         if: github.event_name == 'push' || github.event_name == 'pull_request' 
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v46
         with:
           files: |
             **/*.go
@@ -143,7 +143,7 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v46
         with:
           files: |
             **/*.go
@@ -212,7 +212,7 @@ jobs:
         with:
           submodules: true
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v46
         with:
           files: |
             **/*.go
@@ -259,7 +259,7 @@ jobs:
         with:
           submodules: true
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v46
         with:
           files: |
             **/*.go
@@ -306,7 +306,7 @@ jobs:
         with:
           submodules: true
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v46
         with:
           files: |
             **/*.go
@@ -402,7 +402,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v46
         with:
           files: |
             go.mod
