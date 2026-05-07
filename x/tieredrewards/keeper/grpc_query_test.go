@@ -282,11 +282,11 @@ func (s *KeeperSuite) TestGRPCQueryEstimatePositionRewards_DelegatedWithBaseAndB
 	lockAmount := sdkmath.NewInt(sdk.DefaultPowerReduction.Int64())
 	pos := s.setupNewTierPosition(lockAmount, false)
 	delAddr := sdk.MustAccAddressFromBech32(pos.Owner)
-	valAddr := sdk.MustValAddressFromBech32(pos.Validator)
+	valAddr := sdk.MustValAddressFromBech32(pos.Delegation.ValidatorAddress)
 	s.setValidatorCommission(valAddr, sdkmath.LegacyZeroDec())
 	_, bondDenom := s.getStakingData()
 
-	posBefore, err := s.keeper.GetPosition(s.ctx, uint64(0))
+	posBefore, err := s.keeper.GetPositionState(s.ctx, uint64(0))
 	s.Require().NoError(err)
 
 	// Advance one block so the delegation's starting period in x/distribution
@@ -332,11 +332,11 @@ func (s *KeeperSuite) TestGRPCQueryEstimatePositionRewards_DelegatedWithBaseAndB
 	tokensPerShare, err := s.keeper.GetTokensPerShare(s.ctx, valAddr)
 	s.Require().NoError(err)
 
-	expectedBonus := s.keeper.ComputeSegmentBonus(&posBefore, tier, posBefore.LastBonusAccrual, s.ctx.BlockTime(), tokensPerShare)
+	expectedBonus := s.keeper.ComputeSegmentBonus(posBefore, tier, posBefore.LastBonusAccrual, s.ctx.BlockTime(), tokensPerShare)
 	actualBonus := resp.BonusRewards.AmountOf(bondDenom)
 	s.Require().Equal(expectedBonus.String(), actualBonus.String(),
 		"bonus rewards should match what is calculated")
-	posAfter, err := s.keeper.GetPosition(s.ctx, 0)
+	posAfter, err := s.keeper.GetPositionState(s.ctx, 0)
 	s.Require().NoError(err)
 	s.Require().Equal(posBefore, posAfter, "position state must remain unchanged by estimation")
 
@@ -436,7 +436,7 @@ func (s *KeeperSuite) TestGRPCQueryVotingPowerByOwner_UnbondingValidatorNotCount
 	lockAmount := sdkmath.NewInt(5000)
 	pos := s.setupNewTierPosition(lockAmount, false)
 	delAddr := sdk.MustAccAddressFromBech32(pos.Owner)
-	valAddr := sdk.MustValAddressFromBech32(pos.Validator)
+	valAddr := sdk.MustValAddressFromBech32(pos.Delegation.ValidatorAddress)
 
 	s.jailAndUnbondValidator(valAddr)
 
@@ -444,7 +444,7 @@ func (s *KeeperSuite) TestGRPCQueryVotingPowerByOwner_UnbondingValidatorNotCount
 	s.Require().NoError(err)
 	s.Require().False(val.IsBonded(), "validator should no longer be bonded")
 
-	positions, err := s.keeper.GetPositionsByOwner(s.ctx, delAddr)
+	positions, err := s.keeper.GetPositionStatesByOwner(s.ctx, delAddr)
 	s.Require().NoError(err)
 	s.Require().Len(positions, 1)
 
@@ -493,7 +493,6 @@ func (s *KeeperSuite) TestGRPCQueryRawTierPosition() {
 	s.Require().NoError(err)
 	s.Require().Equal(pos.Id, resp.Position.Id)
 	s.Require().Equal(pos.Owner, resp.Position.Owner)
-	s.Require().True(resp.Position.Amount.IsZero(), "raw delegated position amount should be zero")
 }
 
 func (s *KeeperSuite) TestGRPCQueryRawTierPositionsByOwner() {
@@ -503,7 +502,6 @@ func (s *KeeperSuite) TestGRPCQueryRawTierPositionsByOwner() {
 	s.Require().NoError(err)
 	s.Require().Len(resp.Positions, 1)
 	s.Require().Equal(pos.Id, resp.Positions[0].Id)
-	s.Require().True(resp.Positions[0].Amount.IsZero(), "raw delegated position amount should be zero")
 }
 
 func (s *KeeperSuite) TestGRPCQueryRawTierPositionsByTier() {
@@ -513,7 +511,6 @@ func (s *KeeperSuite) TestGRPCQueryRawTierPositionsByTier() {
 	s.Require().NoError(err)
 	s.Require().Len(resp.Positions, 1)
 	s.Require().Equal(pos.Id, resp.Positions[0].Id)
-	s.Require().True(resp.Positions[0].Amount.IsZero(), "raw delegated position amount should be zero")
 }
 
 func (s *KeeperSuite) TestGRPCQueryRawAllTierPositions() {
@@ -532,7 +529,7 @@ func (s *KeeperSuite) TestGRPCQueryRawAllTierPositions() {
 
 func (s *KeeperSuite) TestGRPCQueryValidatorData() {
 	pos := s.setupNewTierPosition(sdkmath.NewInt(sdk.DefaultPowerReduction.Int64()), false)
-	valAddr := sdk.MustValAddressFromBech32(pos.Validator)
+	valAddr := sdk.MustValAddressFromBech32(pos.Delegation.ValidatorAddress)
 	_, bondDenom := s.getStakingData()
 
 	s.setValidatorCommission(valAddr, sdkmath.LegacyZeroDec())
@@ -567,27 +564,10 @@ func (s *KeeperSuite) TestGRPCQueryValidatorData_Empty() {
 // Position mappings
 // ---------------------------------------------------------------------------
 
-func (s *KeeperSuite) TestGRPCQueryPositionMappings_AfterUndelegate() {
-	pos := s.setupNewTierPosition(sdkmath.NewInt(sdk.DefaultPowerReduction.Int64()), true)
-
-	_, bondDenom := s.getStakingData()
-	s.fundRewardsPool(sdkmath.NewInt(10_000_000), bondDenom)
-	s.advancePastExitDuration()
-
-	msgServer := keeper.NewMsgServerImpl(s.keeper)
-	_, err := msgServer.TierUndelegate(s.ctx, &types.MsgTierUndelegate{
-		Owner:      pos.Owner,
-		PositionId: pos.Id,
-	})
-	s.Require().NoError(err)
-
-	resp, err := s.queryClient.PositionMappings(s.ctx.Context(), &types.QueryPositionMappingsRequest{PositionId: pos.Id})
-	s.Require().NoError(err)
-	s.Require().Len(resp.UnbondingIds, 1, "should have 1 unbonding mapping")
-	s.Require().Empty(resp.RedelegationIds)
-}
-
-func (s *KeeperSuite) TestGRPCQueryPositionMappings_AfterRedelegate() {
+// TestRedelegationMappings_AfterRedelegate verifies the keeper records an
+// active redelegation entry in the unbondingId→posId mapping so
+// BeforeRedelegationSlashed can route slash events back to the position.
+func (s *KeeperSuite) TestRedelegationMappings_AfterRedelegate() {
 	pos := s.setupNewTierPosition(sdkmath.NewInt(sdk.DefaultPowerReduction.Int64()), false)
 	dstValAddr, _ := s.createSecondValidator()
 
@@ -599,17 +579,41 @@ func (s *KeeperSuite) TestGRPCQueryPositionMappings_AfterRedelegate() {
 	})
 	s.Require().NoError(err)
 
-	resp, err := s.queryClient.PositionMappings(s.ctx.Context(), &types.QueryPositionMappingsRequest{PositionId: pos.Id})
+	isRedelegating, err := s.keeper.IsRedelegating(s.ctx, pos.Id)
 	s.Require().NoError(err)
-	s.Require().Empty(resp.UnbondingIds)
-	s.Require().Len(resp.RedelegationIds, 1, "should have 1 redelegation mapping")
+	s.Require().True(isRedelegating, "redelegation mapping should be populated after TierRedelegate")
 }
 
-func (s *KeeperSuite) TestGRPCQueryPositionMappings_Empty() {
-	pos := s.setupNewTierPosition(sdkmath.NewInt(sdk.DefaultPowerReduction.Int64()), false)
-
-	resp, err := s.queryClient.PositionMappings(s.ctx.Context(), &types.QueryPositionMappingsRequest{PositionId: pos.Id})
+// TestGRPCQueryRedelegationMappings_Empty verifies the query returns an empty
+// list when no redelegations are active.
+func (s *KeeperSuite) TestGRPCQueryRedelegationMappings_Empty() {
+	resp, err := s.queryClient.RedelegationMappings(
+		s.ctx.Context(), &types.QueryRedelegationMappingsRequest{},
+	)
 	s.Require().NoError(err)
-	s.Require().Empty(resp.UnbondingIds)
-	s.Require().Empty(resp.RedelegationIds)
+	s.Require().Empty(resp.RedelegationMappings)
+}
+
+// TestGRPCQueryRedelegationMappings_ReturnsActiveEntries drives a real
+// redelegation through TierRedelegate, then asserts the query returns the
+// expected {unbonding_id, position_id} entry.
+func (s *KeeperSuite) TestGRPCQueryRedelegationMappings_ReturnsActiveEntries() {
+	pos := s.setupNewTierPosition(sdkmath.NewInt(sdk.DefaultPowerReduction.Int64()), false)
+	dstValAddr, _ := s.createSecondValidator()
+
+	msgServer := keeper.NewMsgServerImpl(s.keeper)
+	_, err := msgServer.TierRedelegate(s.ctx, &types.MsgTierRedelegate{
+		Owner:        pos.Owner,
+		PositionId:   pos.Id,
+		DstValidator: dstValAddr.String(),
+	})
+	s.Require().NoError(err)
+
+	resp, err := s.queryClient.RedelegationMappings(
+		s.ctx.Context(), &types.QueryRedelegationMappingsRequest{},
+	)
+	s.Require().NoError(err)
+	s.Require().Len(resp.RedelegationMappings, 1)
+	s.Require().NotZero(resp.RedelegationMappings[0].UnbondingId)
+	s.Require().Equal(pos.Id, resp.RedelegationMappings[0].PositionId)
 }

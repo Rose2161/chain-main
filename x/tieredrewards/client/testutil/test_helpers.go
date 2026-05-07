@@ -220,8 +220,8 @@ func QueryValidatorDataExec(clientCtx client.Context, validator string, extraArg
 	return ExecQueryCmd(clientCtx, append([]string{validator}, extraArgs...), tieredrewardscli.GetCmdQueryValidatorData)
 }
 
-func QueryPositionMappingsExec(clientCtx client.Context, positionID string, extraArgs ...string) (testutil.BufferWriter, error) {
-	return ExecQueryCmd(clientCtx, append([]string{positionID}, extraArgs...), tieredrewardscli.GetCmdQueryPositionMappings)
+func QueryRedelegationMappingsExec(clientCtx client.Context, extraArgs ...string) (testutil.BufferWriter, error) {
+	return ExecQueryCmd(clientCtx, extraArgs, tieredrewardscli.GetCmdQueryRedelegationMappings)
 }
 
 func UpdateParamsProposalExec(clientCtx client.Context, from, params string, extraArgs ...string) (testutil.BufferWriter, error) {

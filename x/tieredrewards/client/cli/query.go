@@ -40,7 +40,7 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdQueryRawTierPositionsByTier(),
 		GetCmdQueryRawAllTierPositions(),
 		GetCmdQueryValidatorData(),
-		GetCmdQueryPositionMappings(),
+		GetCmdQueryRedelegationMappings(),
 	)
 
 	return queryCmd
@@ -414,19 +414,20 @@ func GetCmdQueryValidatorData() *cobra.Command {
 	)
 }
 
-func GetCmdQueryPositionMappings() *cobra.Command {
-	return newQueryCmd(
-		"position-mappings [position-id]",
-		cobra.ExactArgs(1),
-		"Query unbonding and redelegation ID mappings for a position",
-		func(ctx context.Context, _ client.Context, queryClient types.QueryClient, args []string) (proto.Message, error) {
-			positionID, err := parseUint64Arg("position-id", args[0])
+func GetCmdQueryRedelegationMappings() *cobra.Command {
+	cmd := newPaginatedQueryCmd(
+		"redelegation-mappings",
+		"Query all tier position redelegation mappings keyed by staking unbonding id (paginated)",
+		func(ctx context.Context, _ client.Context, cmd *cobra.Command, queryClient types.QueryClient) (proto.Message, error) {
+			pageReq, err := client.ReadPageRequest(cmd.Flags())
 			if err != nil {
 				return nil, err
 			}
-			return queryClient.PositionMappings(ctx, &types.QueryPositionMappingsRequest{
-				PositionId: positionID,
+			return queryClient.RedelegationMappings(ctx, &types.QueryRedelegationMappingsRequest{
+				Pagination: pageReq,
 			})
 		},
 	)
+	flags.AddPaginationFlagsToCmd(cmd, "redelegation-mappings")
+	return cmd
 }

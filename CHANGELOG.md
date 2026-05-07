@@ -19,6 +19,7 @@
 - [#1271](https://github.com/crypto-org-chain/chain-main/pull/1271) feat(x/tieredrewards): add initial tier definitions in upgrade handler and allow zero MinLockAmount.
 - [#1272](https://github.com/crypto-org-chain/chain-main/pull/1272) feat(x/tieredrewards): claim bonus rewards lazily upon validator event (unbonding/slashing), amount should be zero when delegated and populated when position is undelegated
 - [#1275](https://github.com/crypto-org-chain/chain-main/pull/1275) feat(x/tieredrewards): update testnet upgrade params and tiers.
+- [#1292](https://github.com/crypto-org-chain/chain-main/pull/1292) feat: fetch position delegation state from staking module.
 
 ### Improvements
 
