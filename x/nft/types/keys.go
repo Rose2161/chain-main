@@ -1,5 +1,5 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package types
 
 import (
@@ -13,7 +13,7 @@ const (
 	// ModuleName is the name of the module
 	ModuleName = "nft"
 
-	// avoid conflicts with sdk nft module
+	// ModuleNameAlias avoid conflicts with sdk nft module
 	ModuleNameAlias = "nft2"
 
 	// StoreKey is the default store key for NFT
@@ -39,8 +39,8 @@ var (
 // SplitKeyOwner return the address,denom,id from the key of stored owner
 func SplitKeyOwner(key []byte) (address sdk.AccAddress, denomID, tokenID string, err error) {
 	key = key[len(PrefixOwners)+len(delimiter):]
-	keys := bytes.Split(key, delimiter)
-	if len(keys) != 3 {
+	keys := bytes.SplitN(key, delimiter, 2)
+	if len(keys) < 2 {
 		return address, denomID, tokenID, errors.New("wrong KeyOwner")
 	}
 
@@ -49,42 +49,37 @@ func SplitKeyOwner(key []byte) (address sdk.AccAddress, denomID, tokenID string,
 		return address, denomID, tokenID, err
 	}
 
-	denomID = string(keys[1])
-	tokenID = string(keys[2])
+	denomID, tokenID, err = SplitKeyDenom(keys[1])
 
-	return
+	return address, denomID, tokenID, err
 }
 
 func SplitKeyDenom(key []byte) (denomID, tokenID string, err error) {
-	keys := bytes.Split(key, delimiter)
-
-	switch len(keys) {
-	case 2:
-		{
-			denomID = string(keys[0])
-			tokenID = string(keys[1])
+	if bytes.HasPrefix(key, []byte(IBCPrefix)) {
+		// IBC denom: ibc/hash/tokenID (take remainder after second delimiter as tokenID)
+		rest := key[len(IBCPrefix):]
+		idx := bytes.Index(rest, delimiter)
+		if idx < 0 || idx != IBCDenomLen-len(IBCPrefix) {
+			return denomID, tokenID, errors.New("wrong KeyDenom")
 		}
-	case 3:
-		{
-			if string(keys[0]) == "ibc" {
-				denomID = "ibc/" + string(keys[1])
-				tokenID = string(keys[2])
-			} else {
-				return denomID, tokenID, errors.New("wrong KeyOwner")
-			}
+		denomID = IBCPrefix + string(rest[:idx])
+		tokenID = string(rest[idx+len(delimiter):])
+	} else {
+		// Standard denom: denom/tokenID (take remainder after first delimiter as tokenID)
+		idx := bytes.Index(key, delimiter)
+		if idx < 0 {
+			return denomID, tokenID, errors.New("wrong KeyDenom")
 		}
-	default:
-		{
-			return denomID, tokenID, errors.New("wrong KeyOwner")
-		}
+		denomID = string(key[:idx])
+		tokenID = string(key[idx+len(delimiter):])
 	}
 
-	return
+	return denomID, tokenID, nil
 }
 
 // KeyOwner gets the key of a collection owned by an account address
 func KeyOwner(address sdk.AccAddress, denomID, tokenID string) []byte {
-	key := append(PrefixOwners, delimiter...) //nolint:gocritic
+	key := append(PrefixOwners, delimiter...)
 	if address != nil {
 		key = append(key, []byte(address.String())...)
 		key = append(key, delimiter...)
@@ -103,7 +98,7 @@ func KeyOwner(address sdk.AccAddress, denomID, tokenID string) []byte {
 
 // KeyNFT gets the key of nft stored by an denom and id
 func KeyNFT(denomID, tokenID string) []byte {
-	key := append(PrefixNFT, delimiter...) //nolint:gocritic
+	key := append(PrefixNFT, delimiter...)
 	if len(denomID) > 0 {
 		key = append(key, []byte(denomID)...)
 		key = append(key, delimiter...)
@@ -117,18 +112,18 @@ func KeyNFT(denomID, tokenID string) []byte {
 
 // KeyCollection gets the storeKey by the collection
 func KeyCollection(denomID string) []byte {
-	key := append(PrefixCollection, delimiter...) //nolint:gocritic
+	key := append(PrefixCollection, delimiter...)
 	return append(key, []byte(denomID)...)
 }
 
 // KeyDenomID gets the storeKey by the denom id
 func KeyDenomID(id string) []byte {
-	key := append(PrefixDenom, delimiter...) //nolint:gocritic
+	key := append(PrefixDenom, delimiter...)
 	return append(key, []byte(id)...)
 }
 
 // KeyDenomName gets the storeKey by the denom name
 func KeyDenomName(name string) []byte {
-	key := append(PrefixDenomName, delimiter...) //nolint:gocritic
+	key := append(PrefixDenomName, delimiter...)
 	return append(key, []byte(name)...)
 }

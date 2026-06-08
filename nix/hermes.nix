@@ -1,25 +1,35 @@
-{ src
-, lib
-, stdenv
-, darwin
-, rustPlatform
-, symlinkJoin
-, openssl
+{
+  src,
+  lib,
+  stdenv,
+  darwin,
+  rustPlatform,
+  symlinkJoin,
+  openssl,
+  pkg-config,
+  apple-sdk_15,
 }:
 rustPlatform.buildRustPackage rec {
   name = "hermes";
   inherit src;
-  cargoSha256 = "sha256-jqmIBmvY3PXpLFfv6XrnXJ0RmR6amFFMNfgK8qDFHb8=";
   cargoBuildFlags = "-p ibc-relayer-cli";
   buildInputs = lib.optionals stdenv.isDarwin [
-    darwin.apple_sdk.frameworks.Security
+    apple-sdk_15
+    pkg-config
+    openssl
     darwin.libiconv
   ];
+  cargoLock = {
+    lockFile = "${src}/Cargo.lock";
+  };
   doCheck = false;
   RUSTFLAGS = "--cfg ossl111 --cfg ossl110 --cfg ossl101";
   OPENSSL_NO_VENDOR = "1";
   OPENSSL_DIR = symlinkJoin {
     name = "openssl";
-    paths = with openssl; [ out dev ];
+    paths = with openssl; [
+      out
+      dev
+    ];
   };
 }

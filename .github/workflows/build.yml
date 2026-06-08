@@ -10,6 +10,14 @@ on:
   issue_comment:
     types: [created, edited]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Opt into Node 24 for JavaScript actions; default flips on 2026-06-02.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   member:
     name: Check whether it is triggered by team members with issue_comment or push or pull_request
@@ -18,7 +26,7 @@ jobs:
     outputs:
       valid: ${{ steps.setValid.outputs.valid }}
     steps:
-      - uses: tspascoal/get-user-teams-membership@v2
+      - uses: tspascoal/get-user-teams-membership@ba78054988f58bea69b7c6136d563236f8ed2fc0 # v2
         id: checkUserMember
         if: github.event_name == 'issue_comment'
         with:
@@ -59,7 +67,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Github API Request
         id: request
-        uses: octokit/request-action@v2.0.0
+        uses: octokit/request-action@bbedc70b1981e610d89f1f8de88311a1fc02fb83 # v2.4.0
         if: github.event_name == 'issue_comment'
         with:
           route: ${{ github.event.issue.pull_request.url }}
@@ -68,35 +76,46 @@ jobs:
       - name: Get Comment PR informations
         id: pr_data
         if: github.event_name == 'issue_comment'
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_DATE: ${{ github.event.comment.created_at }}
         run: |
-          echo "repo_name=${{ fromJson(steps.request.outputs.data).head.repo.full_name }}" >> $GITHUB_OUTPUT
-          comment_hash=`echo ${{ github.event.comment.body }} | cut -d' ' -f2` # get commit hash if any
+          PR_PUSHED_AT="${{ fromJson(steps.request.outputs.data).pushed_at }}"
+          comment_hash=`echo "$COMMENT_BODY" | cut -d' ' -f2` # get commit hash if any
           if [[ "${comment_hash}" == "/runsim" ]]; then 
-            # use default head ref
-            echo "ref=${{ fromJson(steps.request.outputs.data).head.ref }}" >> $GITHUB_OUTPUT
+            # use default head ref, if the PR hasn't changed since the comment
+            if [[ $(date -d "$PR_PUSHED_AT" +%s) -gt $(date -d "$COMMENT_AT" +%s) ]]; then
+              echo "The PR has changed since the comment, and is therefore not safe to use. Exiting."
+              exit 1
+            fi
+            echo "ref=${{ fromJson(steps.request.outputs.data).head.sha }}" >> $GITHUB_OUTPUT
           else
             # use comment provided ref
             echo "ref=${comment_hash}" >> $GITHUB_OUTPUT
           fi
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: 1.22
+          go-version: 1.25
+          cache: true
+          cache-dependency-path: go.sum
       - name: Checkout Comment PR Branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         if: github.event_name == 'issue_comment'
         with:
           submodules: true
+          persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ steps.pr_data.outputs.repo_name }}
           ref: ${{ steps.pr_data.outputs.ref }}
       - name: Normal check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           submodules: true
         if: github.event_name == 'push' || github.event_name == 'pull_request' 
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: |
             **/*.go
@@ -113,10 +132,10 @@ jobs:
         run: make test
         if: "steps.changed-files.outputs.any_changed == 'true' || github.event_name == 'issue_comment'"
       - name: Upload coverage report
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.txt
+          files: ./coverage.txt
           flags: unit_tests
       - name: Create file status_build.txt and write the job status into it
         if: github.event_name == 'issue_comment'
@@ -124,7 +143,7 @@ jobs:
           echo ${{ job.status }} > status_build.txt
       - name: Upload file status_build.txt as an artifact
         if: github.event_name == 'issue_comment'
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pass_status_build
           path: status_build.txt
@@ -135,21 +154,26 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v23
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          nix_path: nixpkgs=channel:nixos-22.11
+          persist-credentials: false
+      - uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
+        with:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: |
             **/*.go
             go.mod
             go.sum
-      - uses: cachix/cachix-action@v12
+      - uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c # v17
         if: steps.changed-files.outputs.any_changed == 'true'
         with:
           name: crypto-com
@@ -159,7 +183,7 @@ jobs:
       - name: Run build
         run: ./scripts/release.sh
         if: steps.changed-files.outputs.any_changed == 'true'
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: "chain-maind-tarball-${{ matrix.os }}"
           path: "*.tar.gz"
@@ -170,13 +194,15 @@ jobs:
     needs: build
     if: github.event_name == 'push' || github.event_name == 'issue_comment'
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: 1.22
+          go-version: 1.25
+          cache: true
+          cache-dependency-path: go.sum
       - name: install runsim
         run: |
           export GO111MODULE="on" && go install github.com/cosmos/tools/cmd/runsim@v1.0.0
-      - uses: actions/cache@v2.1.1
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/go/bin
           key: ${{ runner.os }}-go-runsim-binary
@@ -186,7 +212,7 @@ jobs:
           echo ${{ job.status }} > status_install.txt
       - name: Upload file status_install.txt as an artifact
         if: github.event_name == 'issue_comment'
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pass_status_install
           path: status_install.txt
@@ -195,30 +221,33 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, install-runsim]
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: 1.22
+          go-version: 1.25
+          cache: true
+          cache-dependency-path: go.sum
       - name: Checkout Comment PR Branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         if: github.event_name == 'issue_comment'
         with:
           submodules: true
+          persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ needs.build.outputs.repo_name }}
           ref: ${{ needs.build.outputs.ref }}
       - name: Normal check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         if: github.event_name == 'push' || github.event_name == 'pull_request' 
         with:
           submodules: true
+          persist-credentials: false
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: |
             **/*.go
             go.mod
             go.sum
-      - uses: actions/cache@v2.1.1
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/go/bin
           key: ${{ runner.os }}-go-runsim-binary
@@ -233,7 +262,7 @@ jobs:
           echo ${{ job.status }} > status_sim1.txt
       - name: Upload file status_sim1.txt as an artifact
         if: github.event_name == 'issue_comment'
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pass_status_sim1
           path: status_sim1.txt
@@ -242,30 +271,33 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, install-runsim]
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: 1.22
+          go-version: 1.25
+          cache: true
+          cache-dependency-path: go.sum
       - name: Checkout Comment PR Branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         if: github.event_name == 'issue_comment'
         with:
           submodules: true
+          persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ needs.build.outputs.repo_name }}
           ref: ${{ needs.build.outputs.ref }}
       - name: Normal check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         if: github.event_name == 'push' || github.event_name == 'pull_request' 
         with:
           submodules: true
+          persist-credentials: false
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: |
             **/*.go
             go.mod
             go.sum
-      - uses: actions/cache@v2.1.1
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/go/bin
           key: ${{ runner.os }}-go-runsim-binary
@@ -280,7 +312,7 @@ jobs:
           echo ${{ job.status }} > status_sim2.txt
       - name: Upload file status_sim2.txt as an artifact
         if: github.event_name == 'issue_comment'
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pass_status_sim2
           path: status_sim2.txt
@@ -289,30 +321,33 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, install-runsim]
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: 1.22
+          go-version: 1.25
+          cache: true
+          cache-dependency-path: go.sum
       - name: Checkout Comment PR Branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         if: github.event_name == 'issue_comment'
         with:
           submodules: true
+          persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ needs.build.outputs.repo_name }}
           ref: ${{ needs.build.outputs.ref }}
       - name: Normal check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         if: github.event_name == 'push' || github.event_name == 'pull_request' 
         with:
           submodules: true
+          persist-credentials: false
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: |
             **/*.go
             go.mod
             go.sum
-      - uses: actions/cache@v2.1.1
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/go/bin
           key: ${{ runner.os }}-go-runsim-binary
@@ -327,7 +362,7 @@ jobs:
           echo ${{ job.status }} > status_sim3.txt
       - name: Upload file status_sim3.txt as an artifact
         if: github.event_name == 'issue_comment'
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pass_status_sim3
           path: status_sim3.txt
@@ -340,27 +375,27 @@ jobs:
     if: always() && github.event_name == 'issue_comment' && needs.member.outputs.valid == 'true'
     steps: 
       - name: Download artifact pass_status_build
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: pass_status_build
       - name: Download artifact pass_status_install
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: pass_status_install
       - name: Download artifact pass_status_sim1
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: pass_status_sim1
       - name: Download artifact pass_status_sim2
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: pass_status_sim2
       - name: Download artifact pass_status_sim3
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         continue-on-error: true
         with:
           name: pass_status_sim3
@@ -400,14 +435,17 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - id: changed-files
-        uses: tj-actions/changed-files@v41
+        uses: tj-actions/changed-files@v46
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: |
             go.mod
             go.sum
-      - uses: cachix/install-nix-action@v23
+      - uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
         if: steps.changed-files.outputs.any_changed == 'true'
         with:
           extra_nix_config: |
@@ -421,7 +459,7 @@ jobs:
           set +e
           (git diff --no-ext-diff --exit-code)
           echo "changed=$?" >> $GITHUB_OUTPUT
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: steps.changes.outputs.changed == 1
         with:
           name: gomod2nix.toml
