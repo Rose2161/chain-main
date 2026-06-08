@@ -1,12 +1,11 @@
 //go:build !rocksdb
-// +build !rocksdb
 
 package opendb
 
 import (
 	"path/filepath"
 
-	dbm "github.com/cometbft/cometbft-db"
+	dbm "github.com/cosmos/cosmos-db"
 )
 
 func OpenDB(home string, backendType dbm.BackendType) (dbm.DB, error) {

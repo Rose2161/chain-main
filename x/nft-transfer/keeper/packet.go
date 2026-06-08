@@ -3,12 +3,15 @@ package keeper
 import (
 	"strings"
 
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft-transfer/types"
+	nfttypes "github.com/crypto-org-chain/chain-main/v8/x/nft/types"
+
 	newsdkerrors "cosmossdk.io/errors"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/types"
 )
 
 // refundPacketToken will unescrow and send back the tokens back to sender
@@ -78,7 +81,7 @@ func (k Keeper) createOutgoingPacket(ctx sdk.Context,
 
 	// deconstruct the token denomination into the denomination trace info
 	// to determine if the sender is the source chain
-	if strings.HasPrefix(classID, "ibc/") {
+	if strings.HasPrefix(classID, nfttypes.IBCPrefix) {
 		fullClassPath, err = k.ClassPathFromHash(ctx, classID)
 		if err != nil {
 			return channeltypes.Packet{}, err
@@ -162,12 +165,12 @@ func (k Keeper) processReceivedPacket(ctx sdk.Context, packet channeltypes.Packe
 		voucherClassID := classTrace.IBCClassID()
 
 		if !k.nftKeeper.HasDenomID(ctx, voucherClassID) {
-			if err := k.nftKeeper.IssueDenom(ctx, voucherClassID, "", "", data.ClassUri, escrowAddress); err != nil {
+			if err := k.nftKeeper.IssueDenom(ctx, voucherClassID, voucherClassID, "", data.ClassUri, escrowAddress); err != nil {
 				return err
 			}
 		}
-
-		ctx.EventManager().EmitEvent(
+		sdkCtx := sdk.UnwrapSDKContext(ctx)
+		sdkCtx.EventManager().EmitEvent(
 			sdk.NewEvent(
 				types.EventTypeClassTrace,
 				sdk.NewAttribute(types.AttributeKeyTraceHash, classTrace.Hash().String()),

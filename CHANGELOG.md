@@ -2,7 +2,134 @@
 
 ## UNRELEASED
 
+### Improvements
+
+- [#1304](https://github.com/crypto-org-chain/chain-main/pull/1304) feat(upgrade): add module account converter for upgrade.
+
+### Bugfixes
+
+- [#1305](https://github.com/crypto-org-chain/chain-main/pull/1305) fix(x/tieredrewards): block vesting accounts from creating tier positions.
+- [#1308](https://github.com/crypto-org-chain/chain-main/pull/1308) fix(x/tieredrewards)!: harden position delegator address derivation against pre-creation squatting. 
+- [#1311](https://github.com/crypto-org-chain/chain-main/pull/1311) fix(ci): upgrade nixPkgs to latest 25.11 latest patch.
+
+### Chores
+
+- [#1298](https://github.com/crypto-org-chain/chain-main/pull/1298) disable ICS-721
+- [#1310](https://github.com/crypto-org-chain/chain-main/pull/1310) chore(integration_tests): build upgrade-test binaries from source via flakes.
+
+*May 8, 2026*
+
+## v7.1.0
+
+### Improvements
+
+- [#1295](https://github.com/crypto-org-chain/chain-main/pull/1295) chore(x/nft): pre-allocate slice in GetCollections to avoid repeated reallocs.
+- [#1284](https://github.com/crypto-org-chain/chain-main/pull/1284) feat(x/tieredrewards): add gRPC queries and CLI commands to list positions by tier id.
+- [#1293](https://github.com/crypto-org-chain/chain-main/pull/1293) feat(x/tieredrewards)!: remove `MsgTierDelegate` - this message was only reachable as a recovery path for fully-slashed positions.
+
+### Bugfixes
+
+- [#1297](https://github.com/crypto-org-chain/chain-main/pull/1297) feat(x/tieredrewards): fix: remove UpdateBonusCheckpoints call from AddToTierPosition and ExitDelegationFromTier. Disallow AddToTierPosition if position is undelegated.
+
+*Apr 25, 2026*
+
+## v7.0.0
+
+### Features
+
+- [#1261](https://github.com/crypto-org-chain/chain-main/pull/1261) Implement tokenomics (inflation decay, base rewards topup and tiered rewards module)
+- [#1265](https://github.com/crypto-org-chain/chain-main/pull/1265) feat(x/tieredrewards): add MsgExitTierWithDelegation - allow position to exit tier by transferring delegation back to owner directly.
+- [#1269](https://github.com/crypto-org-chain/chain-main/pull/1269) feat(x/tieredrewards): MsgClaimTierRewards now accepts multiple position IDs to claim rewards in a single transaction.
+- [#1271](https://github.com/crypto-org-chain/chain-main/pull/1271) feat(x/tieredrewards): add initial tier definitions in upgrade handler and allow zero MinLockAmount.
+- [#1272](https://github.com/crypto-org-chain/chain-main/pull/1272) feat(x/tieredrewards): claim bonus rewards lazily upon validator event (unbonding/slashing), amount should be zero when delegated and populated when position is undelegated
+- [#1275](https://github.com/crypto-org-chain/chain-main/pull/1275) feat(x/tieredrewards): update testnet upgrade params and tiers.
+- [#1292](https://github.com/crypto-org-chain/chain-main/pull/1292) feat: fetch position delegation state from staking module.
+
+### Improvements
+
+- [#1169](https://github.com/crypto-org-chain/chain-main/pull/1169) Update linter and tidy up code
+- [#1175](https://github.com/crypto-org-chain/chain-main/pull/1175) Add maxsupply module
+- [#1181](https://github.com/crypto-org-chain/chain-main/pull/1181) Fix Makefile chaindImage remote build env wrong check + add script to run chain locally
+- [#1182](https://github.com/crypto-org-chain/chain-main/pull/1182) Refactor script to run chain locally to use daemon in default go PATH
+- [#1185](https://github.com/crypto-org-chain/chain-main/pull/1185) Error deleting legacy versions bug.
+- [#1189](https://github.com/crypto-org-chain/chain-main/pull/1189) versiondb interface mismatch.
+- [#1196](https://github.com/crypto-org-chain/chain-main/pull/1196) ci: use golangci-lint run --fix.
+- [#1200](https://github.com/crypto-org-chain/chain-main/pull/1200) feat: use cronos store and rocksdb v9.11.2.
+- [#1203](https://github.com/crypto-org-chain/chain-main/pull/1203) feat: use cosmos-sdk v0.53.4.
+- [#1205](https://github.com/crypto-org-chain/chain-main/pull/1205) Bump module version to v8 to follow semver convention
+- [#1170](https://github.com/crypto-org-chain/chain-main/pull/1170) Use maps.Copy for cleaner map handling
+
+### Bugfixes
+
+- [#1273](https://github.com/crypto-org-chain/chain-main/pull/1273) fix(x/tieredrewards): claim pending rewards in redelegation slash.
+- [#1209](https://github.com/crypto-org-chain/chain-main/pull/1209) Patch comet bft (GHSA-hrhf-2vcr-ghch)
+- [#1252](https://github.com/crypto-org-chain/chain-main/pull/1252) fix: reject nft-transfer sends on non-nft port.
+- [#1256](https://github.com/crypto-org-chain/chain-main/pull/1256) fix(nft): owner key parsing for IBC-received NFTs.
+- [#1260](https://github.com/crypto-org-chain/chain-main/pull/1260) chore(lint): skip running nixfmt in vendor folder
+- [#1262](https://github.com/crypto-org-chain/chain-main/pull/1262) fix(x/nft-transfer): IBC NFT class creation passes voucher class ID as denom name instead of empty string.
+- [#1263](https://github.com/crypto-org-chain/chain-main/pull/1263) fix: remove unused error codes in tieredrewards module
+- [#1267](https://github.com/crypto-org-chain/chain-main/pull/1267) fix: refactor and add back error codes for tieredrewards module
+- [#1276](https://github.com/crypto-org-chain/chain-main/pull/1276) fix: add missing cli queries.
+- [#1282](https://github.com/crypto-org-chain/chain-main/pull/1282) fix: flaky test_begin_blocker_halt_on_excess_supply.
+- [#1285](https://github.com/crypto-org-chain/chain-main/pull/1285) fix(x/tieredrewards): indidivual delegation for each position.
+- [#1290](https://github.com/crypto-org-chain/chain-main/pull/1290) fix: revert removal of tieredrewards module account for consistency.
+
+### Chores
+
+- [#1266](https://github.com/crypto-org-chain/chain-main/pull/1266) chore(deps): bump ibc to 10.5.1
+
+*July 9, 2025*
+
+## v6.0.0-2
+
+- [#1174](https://github.com/crypto-org-chain/chain-main/pull/1174) Replace cosmos sdk fork with official version.
+
+*May 26, 2025*
+
+## v6.0.0
+
 - [#1023](https://github.com/crypto-org-chain/chain-main/pull/1023) Integrate sdk 0.47
+- [#1044](https://github.com/crypto-org-chain/chain-main/pull/1044) Revert the protobuf package name changes introduced in #1023.
+- [#1060](https://github.com/crypto-org-chain/chain-main/pull/1060) Upgrade rocksdb to `v9.2.1` and bump versiondb.
+- [#1061](https://github.com/crypto-org-chain/chain-main/pull/1061) Integrate sdk 0.50.
+- [#1068](https://github.com/crypto-org-chain/chain-main/pull/1068) Upgrade ibc-go to `v8.3.2` and remove icaauth module.
+- [#1084](https://github.com/crypto-org-chain/chain-main/pull/1084) Add MsgModuleQuerySafe in allowed messages for ica host param.
+- [#1086](https://github.com/crypto-org-chain/chain-main/pull/1086) Upgrade ibc-go to `v8.4.0`.
+- [#1087](https://github.com/crypto-org-chain/chain-main/pull/1087) Ensure expedited related gov params pass the basic validation.
+- [#1088](https://github.com/crypto-org-chain/chain-main/pull/1088) Upgrade solomachine to `v0.1.4` and ibc-go to `v8.5.1`.
+* [#1091](https://github.com/crypto-org-chain/chain-main/pull/1091) Update cometbft to `0.38.13`, sdk to `v0.50.10` and memiavl to latest.
+- [#1091](https://github.com/crypto-org-chain/chain-main/pull/1091) Upgrade cometbft to v0.38.13, cosmos-sdk to `v0.50.10`.
+- [#1099](https://github.com/crypto-org-chain/chain-main/pull/1099) Avoid negative coin amount error when query supply liquid of non BaseCoinUnit.
+- [#1157](https://github.com/crypto-org-chain/chain-main/pull/1157) Cache index/filters in rocksdb application.db to reduce ram usage.
+- [#1153](https://github.com/crypto-org-chain/chain-main/pull/1153) Add x/circuit module.
+- [#1153](https://github.com/crypto-org-chain/chain-main/pull/1153) Add Cosmos SDK v0.47 and v0.50 upgrade.
+- [#1153](https://github.com/crypto-org-chain/chain-main/pull/1153) Cronos POS v6 is not released.
+- [#1160](https://github.com/crypto-org-chain/chain-main/pull/1160) Add x/circuit test cases in upgrade test
+- [#1160](https://github.com/crypto-org-chain/chain-main/pull/1160) Refactor integration tests to use more meaningful name
+
+*April 28, 2025*
+
+## v5.0.2
+
+### Bug Fixes
+
+* [#1150](https://github.com/crypto-org-chain/chain-main/pull/1150) Upgrade math and cosmos sdk to latest to include bug fix.
+
+*Mar 13, 2025*
+
+## v5.0.1
+
+### Bug Fixes
+
+- [#1134](https://github.com/crypto-org-chain/chain-main/pull/1134) Merge commit from fork.
+
+*Mar 3, 2025*
+
+## v5.0.0
+
+### State Machine Breaking
+
+- [#1125](https://github.com/crypto-org-chain/chain-main/pull/1125) Cronos New Golden Age.
 
 *Dec 6, 2023*
 
@@ -131,7 +258,7 @@ A small fix on top of `v4.0.0` and upgrade to Cosmos SDK v0.46.4.
 
 ## v4.0.0
 
-This is the release of Crypto.org Chain's `v4.0.0`. It contains following changes (when compared with `v3`):
+This is the release of Cronos.org Chain's `v4.0.0`. It contains following changes (when compared with `v3`):
 
 ## Added
 
@@ -214,14 +341,14 @@ The upgraded Cosmos SDK version contains a fix for the upgrade non-determinism i
 that was discovered during upgrade testing.
 
 *WARNING*: DO NOT upgrade to this binary yet; instructions are going to be published later
-on https://crypto.org/docs/getting-started/upgrade_guide.html .
+on https://docs.cronos.org/
 
 *September 7, 2021*
 
 ## v3.1.1
 This version is identical to the v3.1.0, but updated the ibc-go dependency to 1.1.0.
 *WARNING*: DO NOT upgrade to this binary yet; instructions are going to be published later
-on https://crypto.org/docs/getting-started/upgrade_guide.html .
+on https://docs.cronos.org/
 
 
 *September 2, 2021*
@@ -229,14 +356,14 @@ on https://crypto.org/docs/getting-started/upgrade_guide.html .
 ## v3.1.0
 This version is identical to the v3.0.1, but updated the Cosmos SDK dependency to 0.44.0 which contains a consensus-breaking security patch.
 *WARNING*: DO NOT upgrade to this binary yet; instructions are going to be published later
-on https://crypto.org/docs/getting-started/upgrade_guide.html .
+on https://docs.cronos.org/
 
 *August 26, 2021*
 
 ## v3.0.1
 This version is identical to the v3.0.0, but updated the IBC dependency to 1.0.1 which contains a security patch.
 *WARNING*: DO NOT upgrade to this binary yet; instructions are going to be published later
-on https://crypto.org/docs/getting-started/upgrade_guide.html .
+on https://docs.cronos.org/
 
 *August 23, 2021*
 
@@ -247,7 +374,7 @@ and breaking changes. For more details, please see the [Cosmos SDK](https://gith
 and [ibc-go](https://github.com/cosmos/ibc-go/releases/tag/v1.0.0) release notes.
 In addition to that, it also uses Tendermint v0.34.12.
 *WARNING*: DO NOT upgrade to this binary yet; instructions are going to be published later
-on https://crypto.org/docs/getting-started/upgrade_guide.html .
+on https://docs.cronos.org/
 
 *August 6, 2021*
 
@@ -273,7 +400,7 @@ This version is based on Cosmos SDK 0.42.6 and Tendermint 0.34.11 which, among o
 ## v2.0.1
 This released version is the same as v2.0.0, but contains an upgrade-critical fix.
 NOTE that the upgrade plan name is still expected to be "v2.0.0".
-*WARNING*: please follow the upgrade instructions described here: https://crypto.org/docs/getting-started/upgrade_guide.html#the-canis-major-upgrade-guide-v1-to-v2-0-0
+*WARNING*: please follow the upgrade instructions described here: https://docs.cronos.org/for-node-hosts/running-nodes/cronos-mainnet
 
 ### Bug Fixes
 - [552](https://github.com/crypto-org-chain/chain-main/pull/552) NFT module store initialized after upgrade
@@ -282,7 +409,7 @@ NOTE that the upgrade plan name is still expected to be "v2.0.0".
 
 ## v2.0.0
 This pre-release version contains the scope of [ADR-003](https://github.com/crypto-org-chain/chain-main/blob/master/doc/architecture/adr-003.md) for the mainnet upgrade. It also upgrades to the latest version of Tendermint (0.34.10).
-*WARNING*: please follow the upgrade instructions described here: https://crypto.org/docs/getting-started/upgrade_guide.html#the-canis-major-upgrade-guide-v1-to-v2-0-0
+*WARNING*: please follow the upgrade instructions described here: https://docs.cronos.org/for-node-hosts/running-nodes/cronos-mainnet/the-v1.2-upgrade-guide-v1.1.-to-v1.2.0
 
 ### Breaking changes
 - [516](https://github.com/crypto-org-chain/chain-main/pull/516) NFT module added

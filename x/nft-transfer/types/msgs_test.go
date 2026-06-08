@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	"github.com/cometbft/cometbft/crypto/secp256k1"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft-transfer/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/types"
 )
 
 var (
@@ -20,13 +21,14 @@ func TestMsgTransfer_ValidateBasic(t *testing.T) {
 		msg     *types.MsgTransfer
 		wantErr bool
 	}{
-		{"valid msg", types.NewMsgTransfer("nft-transfer", "channel-1", "cryptoCat", []string{"kitty"}, sender, receiver, clienttypes.NewHeight(1, 1), 1), false},
+		{"valid msg", types.NewMsgTransfer(types.PortID, "channel-1", "cryptoCat", []string{"kitty"}, sender, receiver, clienttypes.NewHeight(1, 1), 1), false},
 		{"invalid msg with port", types.NewMsgTransfer("@nft-transfer", "channel-1", "cryptoCat", []string{"kitty"}, sender, receiver, clienttypes.NewHeight(1, 1), 1), true},
-		{"invalid msg with channel", types.NewMsgTransfer("nft-transfer", "@channel-1", "cryptoCat", []string{"kitty"}, sender, receiver, clienttypes.NewHeight(1, 1), 1), true},
-		{"invalid msg with class", types.NewMsgTransfer("nft-transfer", "channel-1", "", []string{"kitty"}, sender, receiver, clienttypes.NewHeight(1, 1), 1), true},
-		{"invalid msg with token_id", types.NewMsgTransfer("nft-transfer", "channel-1", "cryptoCat", []string{""}, sender, receiver, clienttypes.NewHeight(1, 1), 1), true},
-		{"invalid msg with sender", types.NewMsgTransfer("nft-transfer", "channel-1", "cryptoCat", []string{"kitty"}, "", receiver, clienttypes.NewHeight(1, 1), 1), true},
-		{"invalid msg with receiver", types.NewMsgTransfer("nft-transfer", "channel-1", "cryptoCat", []string{"kitty"}, sender, "", clienttypes.NewHeight(1, 1), 1), true},
+		{"invalid msg with wrong port", types.NewMsgTransfer("transfer", "channel-1", "cryptoCat", []string{"kitty"}, sender, receiver, clienttypes.NewHeight(1, 1), 1), true},
+		{"invalid msg with channel", types.NewMsgTransfer(types.PortID, "@channel-1", "cryptoCat", []string{"kitty"}, sender, receiver, clienttypes.NewHeight(1, 1), 1), true},
+		{"invalid msg with class", types.NewMsgTransfer(types.PortID, "channel-1", "", []string{"kitty"}, sender, receiver, clienttypes.NewHeight(1, 1), 1), true},
+		{"invalid msg with token_id", types.NewMsgTransfer(types.PortID, "channel-1", "cryptoCat", []string{""}, sender, receiver, clienttypes.NewHeight(1, 1), 1), true},
+		{"invalid msg with sender", types.NewMsgTransfer(types.PortID, "channel-1", "cryptoCat", []string{"kitty"}, "", receiver, clienttypes.NewHeight(1, 1), 1), true},
+		{"invalid msg with receiver", types.NewMsgTransfer(types.PortID, "channel-1", "cryptoCat", []string{"kitty"}, sender, "", clienttypes.NewHeight(1, 1), 1), true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
