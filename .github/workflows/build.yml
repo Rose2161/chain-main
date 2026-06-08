@@ -114,6 +114,7 @@ jobs:
           submodules: true
         if: github.event_name == 'push' || github.event_name == 'pull_request' 
       - id: changed-files
+        uses: tj-actions/changed-files@v46
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: |
@@ -438,6 +439,7 @@ jobs:
         with:
           persist-credentials: false
       - id: changed-files
+        uses: tj-actions/changed-files@v46
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: |
