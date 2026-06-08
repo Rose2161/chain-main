@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/crypto-org-chain/chain-main/v8/x/nft-transfer/types"
+	nfttypes "github.com/crypto-org-chain/chain-main/v8/x/nft/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	sdkerrors "cosmossdk.io/errors"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
+	"cosmossdk.io/store/prefix"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/types"
 )
 
 var _ types.QueryServer = Keeper{}
@@ -25,7 +27,7 @@ func (k Keeper) ClassTrace(c context.Context,
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	hash, err := types.ParseHexHash(strings.TrimPrefix(req.Hash, "ibc/"))
+	hash, err := types.ParseHexHash(strings.TrimPrefix(req.Hash, nfttypes.IBCPrefix))
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid denom trace hash: %s, error: %s", hash.String(), err))
 	}

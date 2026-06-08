@@ -1,9 +1,10 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package types
 
 import (
 	newsdkerrors "cosmossdk.io/errors"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
@@ -54,12 +55,6 @@ func (msg MsgIssueDenom) ValidateBasic() error {
 	return ValidateDenomName(msg.Name)
 }
 
-// GetSignBytes Implements Msg.
-func (msg MsgIssueDenom) GetSignBytes() []byte {
-	bz := ModuleCdc.MustMarshalJSON(&msg)
-	return sdk.MustSortJSON(bz)
-}
-
 // GetSigners Implements Msg.
 func (msg MsgIssueDenom) GetSigners() []sdk.AccAddress {
 	from, err := sdk.AccAddressFromBech32(msg.Sender)
@@ -101,12 +96,6 @@ func (msg MsgTransferNFT) ValidateBasic() error {
 		return newsdkerrors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid recipient address (%s)", err)
 	}
 	return ValidateTokenID(msg.Id)
-}
-
-// GetSignBytes Implements Msg.
-func (msg MsgTransferNFT) GetSignBytes() []byte {
-	bz := ModuleCdc.MustMarshalJSON(&msg)
-	return sdk.MustSortJSON(bz)
 }
 
 // GetSigners Implements Msg.
@@ -152,12 +141,6 @@ func (msg MsgEditNFT) ValidateBasic() error {
 		return err
 	}
 	return ValidateTokenID(msg.Id)
-}
-
-// GetSignBytes Implements Msg.
-func (msg MsgEditNFT) GetSignBytes() []byte {
-	bz := ModuleCdc.MustMarshalJSON(&msg)
-	return sdk.MustSortJSON(bz)
 }
 
 // GetSigners Implements Msg.
@@ -207,12 +190,6 @@ func (msg MsgMintNFT) ValidateBasic() error {
 	return ValidateTokenID(msg.Id)
 }
 
-// GetSignBytes Implements Msg.
-func (msg MsgMintNFT) GetSignBytes() []byte {
-	bz := ModuleCdc.MustMarshalJSON(&msg)
-	return sdk.MustSortJSON(bz)
-}
-
 // GetSigners Implements Msg.
 func (msg MsgMintNFT) GetSigners() []sdk.AccAddress {
 	from, err := sdk.AccAddressFromBech32(msg.Sender)
@@ -246,12 +223,6 @@ func (msg MsgBurnNFT) ValidateBasic() error {
 		return err
 	}
 	return ValidateTokenID(msg.Id)
-}
-
-// GetSignBytes Implements Msg.
-func (msg MsgBurnNFT) GetSignBytes() []byte {
-	bz := ModuleCdc.MustMarshalJSON(&msg)
-	return sdk.MustSortJSON(bz)
 }
 
 // GetSigners Implements Msg.

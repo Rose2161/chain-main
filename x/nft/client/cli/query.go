@@ -1,19 +1,18 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package cli
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/types"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
-
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/types"
 )
 
 // GetQueryCmd returns the cli query commands for this module
@@ -63,7 +62,6 @@ func GetCmdQuerySupply() *cobra.Command {
 				}
 			}
 
-			//nolint: govet
 			if err := types.ValidateDenomIDWithIBC(args[0]); err != nil {
 				return err
 			}
@@ -97,8 +95,6 @@ func GetCmdQueryOwner() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			//nolint: govet
 			if _, err := sdk.AccAddressFromBech32(args[0]); err != nil {
 				return err
 			}
@@ -141,8 +137,6 @@ func GetCmdQueryCollection() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			//nolint: govet
 			if err := types.ValidateDenomIDWithIBC(args[0]); err != nil {
 				return err
 			}
@@ -211,8 +205,6 @@ func GetCmdQueryDenom() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			//nolint: govet
 			if err := types.ValidateDenomIDWithIBC(args[0]); err != nil {
 				return err
 			}
@@ -246,7 +238,6 @@ func GetCmdQueryDenomByName() *cobra.Command {
 				return err
 			}
 
-			//nolint: govet
 			if err := types.ValidateDenomName(args[0]); err != nil {
 				return err
 			}
@@ -280,12 +271,10 @@ func GetCmdQueryNFT() *cobra.Command {
 				return err
 			}
 
-			//nolint: govet
 			if err := types.ValidateDenomIDWithIBC(args[0]); err != nil {
 				return err
 			}
 
-			//nolint: govet
 			if err := types.ValidateTokenID(args[1]); err != nil {
 				return err
 			}

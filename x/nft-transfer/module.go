@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"math/rand"
 
+	abci "github.com/cometbft/cometbft/abci/types"
+	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft-transfer/client/cli"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft-transfer/keeper"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft-transfer/simulation"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft-transfer/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
-
-	abci "github.com/cometbft/cometbft/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -17,16 +21,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-
-	porttypes "github.com/cosmos/ibc-go/v7/modules/core/05-port/types"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/client/cli"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/keeper"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/simulation"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/types"
 )
 
 var (
-	_ module.AppModule      = AppModule{}
 	_ module.AppModuleBasic = AppModuleBasic{}
 	_ porttypes.IBCModule   = IBCModule{}
 )
@@ -94,9 +91,6 @@ func NewAppModule(k keeper.Keeper) AppModule {
 	}
 }
 
-// RegisterInvariants implements the AppModule interface
-func (AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
-
 // RegisterServices registers module services.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), am.keeper)
@@ -122,14 +116,11 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 // ConsensusVersion implements AppModule/ConsensusVersion.
 func (AppModule) ConsensusVersion() uint64 { return 1 }
 
-// BeginBlock implements the AppModule interface
-func (am AppModule) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) {
-}
+// IsAppModule implements the appmodule.AppModule interface.
+func (am AppModule) IsAppModule() {}
 
-// EndBlock implements the AppModule interface
-func (am AppModule) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) []abci.ValidatorUpdate {
-	return []abci.ValidatorUpdate{}
-}
+// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
+func (am AppModule) IsOnePerModuleType() {}
 
 // AppModuleSimulation functions
 
@@ -144,7 +135,7 @@ func (AppModule) RandomizedParams(r *rand.Rand) []simtypes.LegacyParamChange {
 }
 
 // RegisterStoreDecoder registers a decoder for nft-transfer module's types
-func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+func (am AppModule) RegisterStoreDecoder(sdr simtypes.StoreDecoderRegistry) {
 	sdr[types.StoreKey] = simulation.NewDecodeStore(am.keeper)
 }
 

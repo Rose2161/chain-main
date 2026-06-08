@@ -1,5 +1,5 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package keeper_test
 
 import (
@@ -8,17 +8,16 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	"github.com/crypto-org-chain/chain-main/v8/app"
+	"github.com/crypto-org-chain/chain-main/v8/testutil"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/keeper"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/types"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"github.com/crypto-org-chain/chain-main/v4/app"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/keeper"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/types"
 )
 
 var (
@@ -40,9 +39,9 @@ var (
 	address   = CreateTestAddrs(1)[0]
 	address2  = CreateTestAddrs(2)[1]
 	address3  = CreateTestAddrs(3)[2]
-	tokenURI  = "https://google.com/token-1.json" //nolint: gosec
-	tokenURI2 = "https://google.com/token-2.json" //nolint: gosec
-	tokenData = "{a:a,b:b}"                       //nolint: gosec
+	tokenURI  = "https://google.com/token-1.json"
+	tokenURI2 = "https://google.com/token-2.json"
+	tokenData = "{a:a,b:b}"
 
 	isCheckTx = false
 )
@@ -60,10 +59,10 @@ type KeeperSuite struct {
 }
 
 func (suite *KeeperSuite) SetupTest() {
-	a := app.Setup(suite.T(), isCheckTx)
+	a := testutil.Setup(isCheckTx, nil)
 	suite.app = a
 	suite.legacyAmino = a.LegacyAmino()
-	suite.ctx = a.BaseApp.NewContext(isCheckTx, tmproto.Header{ChainID: app.TestAppChainID})
+	suite.ctx = a.BaseApp.NewContext(isCheckTx).WithBlockHeader(tmproto.Header{ChainID: testutil.ChainID})
 	suite.keeper = a.NFTKeeper
 
 	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, a.InterfaceRegistry())
@@ -192,9 +191,6 @@ func (suite *KeeperSuite) TestBurnNFT() {
 	// NFT should no longer exist
 	isNFT := suite.keeper.HasNFT(suite.ctx, denomID, tokenID)
 	suite.False(isNFT)
-
-	msg, fail := keeper.SupplyInvariant(suite.keeper)(suite.ctx)
-	suite.False(fail, msg)
 }
 
 // CreateTestAddrs creates test addresses
@@ -207,8 +203,8 @@ func CreateTestAddrs(numAddrs int) []sdk.AccAddress {
 		numString := strconv.Itoa(i)
 		buffer.WriteString("A58856F0FD53BF058B4909A21AEC019107BA6") // base address string
 
-		buffer.WriteString(numString)                          // adding on final two digits to make addresses unique
-		res, _ := sdk.AccAddressFromHexUnsafe(buffer.String()) //nolint: errcheck
+		buffer.WriteString(numString) // adding on final two digits to make addresses unique
+		res, _ := sdk.AccAddressFromHexUnsafe(buffer.String())
 		bech := res.String()
 		addresses = append(addresses, testAddr(buffer.String(), bech))
 		buffer.Reset()
@@ -218,7 +214,7 @@ func CreateTestAddrs(numAddrs int) []sdk.AccAddress {
 }
 
 // for incode address generation
-func testAddr(addr string, bech string) sdk.AccAddress {
+func testAddr(addr, bech string) sdk.AccAddress {
 	res, err := sdk.AccAddressFromHexUnsafe(addr)
 	if err != nil {
 		panic(err)

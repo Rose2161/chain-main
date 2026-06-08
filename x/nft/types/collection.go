@@ -1,9 +1,9 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package types
 
 import (
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/exported"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/exported"
 )
 
 // NewCollection creates a new NFT Collection
@@ -25,7 +25,7 @@ func (c Collection) Supply() int {
 	return len(c.NFTs)
 }
 
-// NewCollection creates a new NFT Collection
+// NewCollections creates a new NFT Collection
 func NewCollections(c ...Collection) []Collection {
 	return append([]Collection{}, c...)
 }
