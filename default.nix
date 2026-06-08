@@ -1,17 +1,19 @@
-{ lib
-, stdenv
-, buildGoApplication
-, nix-gitignore
-, writeShellScript
-, buildPackages
-, coverage ? false # https://tip.golang.org/doc/go1.20#cover
-, gomod2nix
-, rocksdb ? null
-, network ? "mainnet"  # mainnet|testnet
-, rev ? "dirty"
-, ledger_zemu ? false
-, static ? stdenv.hostPlatform.isStatic
-, nativeByteOrder ? true # nativeByteOrder mode will panic on big endian machines
+{
+  lib,
+  stdenv,
+  buildGoApplication,
+  nix-gitignore,
+  writeShellScript,
+  buildPackages,
+  coverage ? false, # https://tip.golang.org/doc/go1.20#cover
+  gomod2nix,
+  rocksdb ? null,
+  sectrustShim ? null,
+  network ? "mainnet", # mainnet|testnet
+  rev ? "dirty",
+  ledger_zemu ? false,
+  static ? stdenv.hostPlatform.isStatic,
+  nativeByteOrder ? true, # nativeByteOrder mode will panic on big endian machines
 }:
 let
   inherit (lib) concatStringsSep;
@@ -35,25 +37,36 @@ let
     "^third_party/cosmos-sdk/.*"
     "^gomod2nix.toml$"
   ];
+  cgoLdFlags =
+    lib.optional (rocksdb != null) (
+      if static then
+        "-lrocksdb -pthread -lstdc++ -ldl -lzstd -lsnappy -llz4 -lbz2 -lz"
+      else if stdenv.hostPlatform.isWindows then
+        "-lrocksdb -lstdc++ -lzstd -lsnappy -llz4 -lbz2 -lz -lshlwapi -lrpcrt4"
+      else
+        "-lrocksdb -pthread -lstdc++ -ldl"
+    )
+    ++ lib.optionals (stdenv.isDarwin && sectrustShim != null) [
+      "${sectrustShim}/lib/libsectrustshim.a"
+    ];
 in
 buildGoApplication rec {
   pname = "chain-maind";
-  version = "v4.3.0";
-  go = buildPackages.go_1_22;
+  version = "v7.2.0";
+  go = buildPackages.go_1_25;
   src = lib.cleanSourceWith {
     name = "src";
     src = lib.sourceByRegex ./. src_regexes;
   };
+  modRoot = ".";
   modules = ./gomod2nix.toml;
   subPackages = [ "cmd/chain-maind" ];
   buildFlags = lib.optionalString coverage "-cover";
-  buildInputs = lib.lists.optional (rocksdb != null) rocksdb;
+  buildInputs =
+    lib.lists.optional (rocksdb != null) rocksdb
+    ++ lib.lists.optionals (stdenv.isDarwin && sectrustShim != null) [ sectrustShim ];
   CGO_ENABLED = "1";
-  CGO_LDFLAGS = lib.optionalString (rocksdb != null) (
-    if static then "-lrocksdb -pthread -lstdc++ -ldl -lzstd -lsnappy -llz4 -lbz2 -lz"
-    else if stdenv.hostPlatform.isWindows then "-lrocksdb-shared"
-    else "-lrocksdb -pthread -lstdc++ -ldl"
-  );
+  CGO_LDFLAGS = lib.concatStringsSep " " cgoLdFlags;
   tags = [
     "cgo"
     "ledger"
@@ -61,7 +74,11 @@ buildGoApplication rec {
     "!ledger_mock"
     (if ledger_zemu then "ledger_zemu" else "!ledger_zemu")
     network
-  ] ++ lib.optionals (rocksdb != null) [ "rocksdb" "grocksdb_no_link" ]
+  ]
+  ++ lib.optionals (rocksdb != null) [
+    "rocksdb"
+    "grocksdb_no_link"
+  ]
   ++ lib.optionals nativeByteOrder [ "nativebyteorder" ];
   ldflags = ''
     -X github.com/cosmos/cosmos-sdk/version.Name=crypto-org-chain
@@ -76,7 +93,8 @@ buildGoApplication rec {
   passthru = {
     # update script use the same golang version as the project
     updateScript =
-      let helper = gomod2nix.override { inherit go; };
+      let
+        helper = gomod2nix.override { inherit go; };
       in
       writeShellScript "${pname}-updater" ''
         exec ${helper}/bin/gomod2nix
@@ -85,8 +103,8 @@ buildGoApplication rec {
 
   doCheck = false;
   meta = with lib; {
-    description = "Official implementation of the Crypto.org blockchain protocol";
-    homepage = "https://crypto.org/";
+    description = "Official implementation of the Cronos.org blockchain protocol";
+    homepage = "https://cronos.org/";
     license = licenses.asl20;
     mainProgram = "chain-maind" + stdenv.hostPlatform.extensions.executable;
     platforms = platforms.all;

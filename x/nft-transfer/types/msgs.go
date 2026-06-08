@@ -3,11 +3,13 @@ package types
 import (
 	"strings"
 
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	host "github.com/cosmos/ibc-go/v10/modules/core/24-host"
+
 	newsdkerrors "cosmossdk.io/errors"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	clienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	host "github.com/cosmos/ibc-go/v7/modules/core/24-host"
 )
 
 // msg types
@@ -53,6 +55,9 @@ func (msg MsgTransfer) ValidateBasic() error {
 	if err := host.PortIdentifierValidator(msg.SourcePort); err != nil {
 		return newsdkerrors.Wrap(err, "invalid source port ID")
 	}
+	if msg.SourcePort != PortID {
+		return newsdkerrors.Wrapf(ErrInvalidSourcePort, "source port must be %q", PortID)
+	}
 	if err := host.ChannelIdentifierValidator(msg.SourceChannel); err != nil {
 		return newsdkerrors.Wrap(err, "invalid source channel ID")
 	}
@@ -80,11 +85,6 @@ func (msg MsgTransfer) ValidateBasic() error {
 		return newsdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "missing recipient address")
 	}
 	return nil
-}
-
-// GetSignBytes implements sdk.Msg.
-func (msg MsgTransfer) GetSignBytes() []byte {
-	return sdk.MustSortJSON(AminoCdc.MustMarshalJSON(&msg))
 }
 
 // GetSigners implements sdk.Msg

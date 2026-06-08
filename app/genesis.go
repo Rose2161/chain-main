@@ -3,10 +3,15 @@ package app
 import (
 	"encoding/json"
 
+	dbm "github.com/cosmos/cosmos-db"
+
+	"cosmossdk.io/log"
+
 	"github.com/cosmos/cosmos-sdk/codec"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 )
 
-// The genesis state of the blockchain is represented here as a map of raw json
+// GenesisState The genesis state of the blockchain is represented here as a map of raw json
 // messages key'd by a identifier string.
 // The identifier is used to determine which module genesis information belongs
 // to so it may be appropriately routed during init chain.
@@ -17,5 +22,9 @@ type GenesisState map[string]json.RawMessage
 
 // NewDefaultGenesisState generates the default state for the application.
 func NewDefaultGenesisState(cdc codec.JSONCodec) GenesisState {
-	return ModuleBasics.DefaultGenesis(cdc)
+	tempApp := New(
+		log.NewNopLogger(), dbm.NewMemDB(), nil, true,
+		simtestutil.NewAppOptionsWithFlagHome(DefaultNodeHome),
+	)
+	return tempApp.BasicModuleManager.DefaultGenesis(cdc)
 }

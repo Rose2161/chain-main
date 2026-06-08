@@ -6,10 +6,10 @@ import (
 	"math/rand"
 	"strings"
 
+	"github.com/crypto-org-chain/chain-main/v8/x/nft-transfer/types"
+
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-
-	"github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/types"
 )
 
 // Simulation parameter constants
@@ -24,7 +24,7 @@ func RadomEnabled(r *rand.Rand) bool {
 func RandomizedGenState(simState *module.SimulationState) {
 	var portID string
 	simState.AppParams.GetOrGenerate(
-		simState.Cdc, port, &portID, simState.Rand,
+		port, &portID, simState.Rand,
 		func(r *rand.Rand) { portID = strings.ToLower(simtypes.RandStringOfLength(r, 20)) },
 	)
 

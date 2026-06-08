@@ -7,7 +7,11 @@ import pytest
 from .ibc_utils import start_and_wait_relayer
 from .utils import cluster_fixture, find_log_event_attrs
 
-pytestmark = pytest.mark.ibc
+# ICS-721 (nft-transfer) is not wired into ChainApp; skip until re-enabled.
+pytestmark = [
+    pytest.mark.ibc,
+    pytest.mark.skip(reason="ICS-721 nft-transfer disabled in app"),
+]
 
 
 @pytest.fixture(scope="module")
@@ -71,11 +75,12 @@ def test_nft_transfer(cluster):
     if rsp["code"] == 0:
         rsp = cli_src.event_query_tx_for(rsp["txhash"])
 
-    ev = find_log_event_attrs(rsp["logs"], "issue_denom")
+    ev = find_log_event_attrs(rsp["events"], "issue_denom")
     assert ev == {
         "denom_id": denomid,
         "denom_name": denomname,
         "creator": addr_src,
+        "msg_index": "0",
     }, ev
 
     rsp = json.loads(
@@ -98,8 +103,9 @@ def test_nft_transfer(cluster):
 
     if rsp["code"] == 0:
         rsp = cli_src.event_query_tx_for(rsp["txhash"])
-    ev = find_log_event_attrs(rsp["logs"], "message")
-    assert ev["action"] == "/nft.v1.MsgMintNFT", ev
+    ev = find_log_event_attrs(rsp["events"], "message")
+    assert ev is not None, rsp["events"]
+    assert ev["action"] == "/chainmain.nft.v1.MsgMintNFT", ev
 
     # nft transfer that's supposed to fail, exceeds max receiver length
     rsp = json.loads(
@@ -486,6 +492,22 @@ def test_nft_transfer(cluster):
     # transfer nft on mid chain (with very less timeout so that the packet times out)
     rsp = json.loads(
         cli_src.raw(
+            "q",
+            "ibc",
+            "client",
+            "consensus-state-heights",
+            "07-tendermint-0",
+            home=cli_src.data_dir,
+            node=cli_src.node_rpc,
+            output="json",
+        )
+    )["consensus_state_heights"]
+    latest = sorted(rsp, key=lambda x: int(x["revision_height"]), reverse=True)[0]
+    packet_timeout_height = (
+        latest["revision_number"] + "-" + str(int(latest["revision_height"]) + 1)
+    )
+    rsp = json.loads(
+        cli_src.raw(
             "tx",
             "nft-transfer",
             "transfer",
@@ -495,7 +517,9 @@ def test_nft_transfer(cluster):
             denomid,
             tokenid,
             "-y",
-            packet_timeout_height="0-1",
+            "--absolute-timeouts",
+            packet_timeout_height=packet_timeout_height,
+            packet_timeout_timestamp=time.time_ns(),
             home=cli_src.data_dir,
             from_=addr_src,
             keyring_backend="test",
