@@ -4,26 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gogo/protobuf/grpc"
+	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/crypto-org-chain/chain-main/v8/x/chainmain/client/cli"
+	"github.com/crypto-org-chain/chain-main/v8/x/chainmain/keeper"
+	"github.com/crypto-org-chain/chain-main/v8/x/chainmain/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
-
-	abci "github.com/cometbft/cometbft/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/crypto-org-chain/chain-main/v4/x/chainmain/client/cli"
-	"github.com/crypto-org-chain/chain-main/v4/x/chainmain/keeper"
-	"github.com/crypto-org-chain/chain-main/v4/x/chainmain/types"
 )
 
-var (
-	_ module.AppModule      = AppModule{}
-	_ module.AppModuleBasic = AppModuleBasic{}
-)
+var _ module.AppModuleBasic = AppModuleBasic{}
 
 // ----------------------------------------------------------------------------
 // AppModuleBasic
@@ -102,15 +97,9 @@ func (am AppModule) Name() string {
 	return am.AppModuleBasic.Name()
 }
 
-// RegisterQueryService registers a GRPC query service to respond to the
+// RegisterServices registers a GRPC query service to respond to the
 // module-specific GRPC queries.
-func (am AppModule) RegisterQueryService(grpc.Server) {}
-
-// RegisterQueryService performs a no-op.
-func (am AppModule) RegisterServices(_ module.Configurator) {}
-
-// RegisterInvariants registers the capability module's invariants.
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
+func (am AppModule) RegisterServices(cfg module.Configurator) {}
 
 // InitGenesis performs the capability module's genesis initialization It returns
 // no validator updates.
@@ -130,11 +119,8 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 	return cdc.MustMarshalJSON(genState)
 }
 
-// BeginBlock executes all ABCI BeginBlock logic respective to the capability module.
-func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
+// IsAppModule implements the appmodule.AppModule interface.
+func (am AppModule) IsAppModule() {}
 
-// EndBlock executes all ABCI EndBlock logic respective to the capability module. It
-// returns no validator updates.
-func (am AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-	return []abci.ValidatorUpdate{}
-}
+// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
+func (am AppModule) IsOnePerModuleType() {}

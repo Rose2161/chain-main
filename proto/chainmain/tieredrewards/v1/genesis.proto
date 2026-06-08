@@ -1,0 +1,48 @@
+syntax = "proto3";
+package chainmain.tieredrewards.v1;
+
+import "chainmain/tieredrewards/v1/params.proto";
+import "chainmain/tieredrewards/v1/types.proto";
+import "cosmos_proto/cosmos.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/crypto-org-chain/chain-main/x/tieredrewards/types";
+
+// RedelegationMapping binds a staking redelegation entry (by unbonding id) to
+// a tier position id, so tier can route per-entry slash/completion hooks.
+message RedelegationMapping {
+  uint64 unbonding_id = 1;
+  uint64 position_id  = 2;
+}
+
+// ValidatorEventEntry wraps a validator address, sequence number and event for genesis export.
+message ValidatorEventEntry {
+  string         validator = 1 [(cosmos_proto.scalar) = "cosmos.ValidatorAddressString"];
+  uint64         sequence  = 2;
+  ValidatorEvent event     = 3 [(gogoproto.nullable) = false];
+}
+
+// ValidatorEventSeqEntry wraps a validator address with its current (last used) event sequence for genesis export.
+message ValidatorEventSeqEntry {
+  string validator   = 1 [(cosmos_proto.scalar) = "cosmos.ValidatorAddressString"];
+  uint64 current_seq = 2;
+}
+
+// GenesisState defines the tieredrewards module's genesis state.
+message GenesisState {
+  // params defines all the parameters of the module.
+  Params params = 1 [(gogoproto.nullable) = false];
+  // tiers is the full set of tiers.
+  repeated Tier tiers = 2 [(gogoproto.nullable) = false];
+  // positions is the full set of positions.
+  repeated Position positions = 3 [(gogoproto.nullable) = false];
+  // next_position_id is the next auto-increment ID for positions.
+  uint64 next_position_id = 4;
+  // redelegation_mappings tracks positions currently undergoing a staking
+  // redelegation, keyed by the entry's staking unbonding id.
+  repeated RedelegationMapping redelegation_mappings = 5 [(gogoproto.nullable) = false];
+  // validator_events stores pending validator lifecycle events for lazy processing.
+  repeated ValidatorEventEntry validator_events = 6 [(gogoproto.nullable) = false];
+  // validator_event_seqs stores the current (last used) event sequence per validator.
+  repeated ValidatorEventSeqEntry validator_event_seqs = 7 [(gogoproto.nullable) = false];
+}

@@ -1,109 +1,118 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"time"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
+	"cosmossdk.io/math"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+
 	"github.com/cosmos/cosmos-sdk/codec"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
-	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
-	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	v6 "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/controller/migrations/v6"
-	icacontrollertypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/controller/types"
-	icahosttypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/host/types"
-	ibctransfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
-	clientkeeper "github.com/cosmos/ibc-go/v7/modules/core/02-client/keeper"
-	"github.com/cosmos/ibc-go/v7/modules/core/exported"
-	ibctmmigrations "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint/migrations"
-	icaauthmoduletypes "github.com/crypto-org-chain/chain-main/v4/x/icaauth/types"
 )
 
-func (app *ChainApp) RegisterUpgradeHandlers(cdc codec.BinaryCodec, clientKeeper clientkeeper.Keeper) {
-	planName := "v4.3.0"
-	// Set param key table for params module migration
-	for _, subspace := range app.ParamsKeeper.GetSubspaces() {
-		var keyTable paramstypes.KeyTable
-		switch subspace.Name() {
-		case minttypes.ModuleName:
-			keyTable = minttypes.ParamKeyTable() //nolint:staticcheck
-		case ibctransfertypes.ModuleName:
-			keyTable = ibctransfertypes.ParamKeyTable()
-		case icacontrollertypes.SubModuleName:
-			keyTable = icacontrollertypes.ParamKeyTable()
-		case stakingtypes.ModuleName:
-			keyTable = stakingtypes.ParamKeyTable()
-		case banktypes.ModuleName:
-			keyTable = banktypes.ParamKeyTable() //nolint:staticcheck
-		case distrtypes.ModuleName:
-			keyTable = distrtypes.ParamKeyTable() //nolint:staticcheck
-		case slashingtypes.ModuleName:
-			keyTable = slashingtypes.ParamKeyTable() //nolint:staticcheck
-		case govtypes.ModuleName:
-			keyTable = govv1.ParamKeyTable() //nolint:staticcheck
-		case icahosttypes.SubModuleName:
-			keyTable = icahosttypes.ParamKeyTable()
-		case icaauthmoduletypes.ModuleName:
-			keyTable = icaauthmoduletypes.ParamKeyTable()
-		case authtypes.ModuleName:
-			keyTable = authtypes.ParamKeyTable() //nolint:staticcheck
-		default:
-			continue
-		}
-		if !subspace.HasKeyTable() {
-			subspace.WithKeyTable(keyTable)
-		}
+const UpgradeV8PlanName = "v8"
+
+func EnsureModuleAccountIfExists(ctx sdk.Context, ak authkeeper.AccountKeeper, moduleName string, perms ...string) error {
+	addr := ak.GetModuleAddress(moduleName)
+	if addr == nil {
+		return fmt.Errorf("module %q is not registered in maccPerms", moduleName)
 	}
-	baseAppLegacySS := app.ParamsKeeper.Subspace(baseapp.Paramspace).WithKeyTable(paramstypes.ConsensusParamsKeyTable())
-	app.UpgradeKeeper.SetUpgradeHandler(planName, func(ctx sdk.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-		// OPTIONAL: prune expired tendermint consensus states to save storage space
-		if _, err := ibctmmigrations.PruneExpiredConsensusStates(ctx, cdc, clientKeeper); err != nil {
-			return nil, err
-		}
-		// explicitly update the IBC 02-client params, adding the localhost client type
-		params := clientKeeper.GetParams(ctx)
-		params.AllowedClients = append(params.AllowedClients, exported.Localhost)
-		clientKeeper.SetParams(ctx, params)
-		if err := v6.MigrateICS27ChannelCapability(
-			ctx,
-			cdc,
-			app.keys[capabilitytypes.ModuleName],
-			app.CapabilityKeeper,
-			icacontrollertypes.SubModuleName,
-		); err != nil {
-			return nil, err
+	acc := ak.GetAccount(ctx, addr)
+	// creation of module account should be handled by the module itself
+	if acc == nil {
+		return nil
+	}
+	if _, ok := acc.(sdk.ModuleAccountI); ok {
+		return nil
+	}
+	baseAcc, ok := acc.(*authtypes.BaseAccount)
+	if !ok {
+		return fmt.Errorf("account at %s for module %q is %T, cannot convert to module account", addr, moduleName, acc)
+	}
+	macc := authtypes.NewModuleAccount(baseAcc, moduleName, perms...)
+	if err := macc.Validate(); err != nil {
+		return fmt.Errorf("module account %q: %w", moduleName, err)
+	}
+	ak.SetModuleAccount(ctx, macc)
+	ctx.Logger().Info("converted base account to module account", "module", moduleName, "address", addr.String())
+	return nil
+}
+
+func (app *ChainApp) RegisterUpgradeHandlers(cdc codec.BinaryCodec) {
+	app.registerV8UpgradeHandler()
+}
+
+// registerV8UpgradeHandler registers the "v8" plan
+func (app *ChainApp) registerV8UpgradeHandler() {
+	app.UpgradeKeeper.SetUpgradeHandler(UpgradeV8PlanName, func(ctx context.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+		sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+		sdkCtx.Logger().Info("v8: running module migrations...")
+		m, err := app.ModuleManager.RunMigrations(ctx, app.configurator, fromVM)
+		if err != nil {
+			return map[string]uint64{}, err
 		}
 
-		// Migrate Tendermint consensus parameters from x/params module to a dedicated x/consensus module.
-		baseapp.MigrateParams(ctx, baseAppLegacySS, &app.ConsensusParamsKeeper)
-		ctx.Logger().Info("start to run module migrations...")
-		return app.mm.RunMigrations(ctx, app.configurator, fromVM)
+		sdkCtx.Logger().Info("v8: upgrade completed", "plan", plan.Name, "version_map", m)
+		return m, nil
 	})
+}
 
-	upgradeInfo, err := app.UpgradeKeeper.ReadUpgradeInfoFromDisk()
+func UpdateExpeditedParams(ctx context.Context, gov govkeeper.Keeper) error {
+	govParams, err := gov.Params.Get(ctx)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read upgrade info from disk %s", err))
+		return err
 	}
-	if upgradeInfo.Name == planName && !app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
-		storeUpgrades := storetypes.StoreUpgrades{
-			Added: []string{
-				consensusparamtypes.StoreKey,
-				crisistypes.StoreKey,
-			},
-		}
-		// configure store loader that checks if version == upgradeHeight and applies store upgrades
-		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	if len(govParams.MinDeposit) > 0 {
+		minDeposit := govParams.MinDeposit[0]
+		expeditedAmount := minDeposit.Amount.MulRaw(govv1.DefaultMinExpeditedDepositTokensRatio)
+		govParams.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin(minDeposit.Denom, expeditedAmount))
 	}
+	threshold, err := math.LegacyNewDecFromStr(govParams.Threshold)
+	if err != nil {
+		return fmt.Errorf("invalid threshold string: %w", err)
+	}
+	expeditedThreshold, err := math.LegacyNewDecFromStr(govParams.ExpeditedThreshold)
+	if err != nil {
+		return fmt.Errorf("invalid expedited threshold string: %w", err)
+	}
+	if expeditedThreshold.LTE(threshold) {
+		expeditedThreshold = threshold.Mul(DefaultThresholdRatio())
+	}
+	if expeditedThreshold.GT(math.LegacyOneDec()) {
+		expeditedThreshold = math.LegacyOneDec()
+	}
+	govParams.ExpeditedThreshold = expeditedThreshold.String()
+	if govParams.ExpeditedVotingPeriod != nil && govParams.VotingPeriod != nil && *govParams.ExpeditedVotingPeriod >= *govParams.VotingPeriod {
+		votingPeriod := DurationToDec(*govParams.VotingPeriod)
+		period := DecToDuration(DefaultPeriodRatio().Mul(votingPeriod))
+		govParams.ExpeditedVotingPeriod = &period
+	}
+	if err := govParams.ValidateBasic(); err != nil {
+		return err
+	}
+	return gov.Params.Set(ctx, govParams)
+}
+
+func DefaultThresholdRatio() math.LegacyDec {
+	return govv1.DefaultExpeditedThreshold.Quo(govv1.DefaultThreshold)
+}
+
+func DefaultPeriodRatio() math.LegacyDec {
+	return DurationToDec(govv1.DefaultExpeditedPeriod).Quo(DurationToDec(govv1.DefaultPeriod))
+}
+
+func DurationToDec(d time.Duration) math.LegacyDec {
+	return math.LegacyMustNewDecFromStr(fmt.Sprintf("%f", d.Seconds()))
+}
+
+func DecToDuration(d math.LegacyDec) time.Duration {
+	return time.Second * time.Duration(d.RoundInt64())
 }

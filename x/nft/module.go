@@ -1,5 +1,5 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package nft
 
 import (
@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"math/rand"
 
+	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/client/cli"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/keeper"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/simulation"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
-
-	abci "github.com/cometbft/cometbft/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -19,15 +22,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/client/cli"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/keeper"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/simulation"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/types"
 )
 
 var (
-	_ module.AppModule           = AppModule{}
 	_ module.AppModuleBasic      = AppModuleBasic{}
 	_ module.AppModuleSimulation = AppModule{}
 )
@@ -114,9 +111,6 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterQueryServer(cfg.QueryServer(), am.keeper)
 }
 
-// RegisterInvariants registers the NFT module invariants.
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
-
 // ConsensusVersion implements AppModule/ConsensusVersion.
 func (a AppModuleBasic) ConsensusVersion() uint64 { return 1 }
 
@@ -137,13 +131,11 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 	return cdc.MustMarshalJSON(gs)
 }
 
-// BeginBlock performs a no-op.
-func (AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
+// IsAppModule implements the appmodule.AppModule interface.
+func (am AppModule) IsAppModule() {}
 
-// EndBlock returns the end blocker for the NFT module. It returns no validator updates.
-func (AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-	return []abci.ValidatorUpdate{}
-}
+// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
+func (am AppModule) IsOnePerModuleType() {}
 
 // ____________________________________________________________________________
 
@@ -160,7 +152,7 @@ func (AppModule) RandomizedParams(r *rand.Rand) []simtypes.LegacyParamChange {
 }
 
 // RegisterStoreDecoder registers a decoder for NFT module's types
-func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+func (am AppModule) RegisterStoreDecoder(sdr simtypes.StoreDecoderRegistry) {
 	sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
 }
 
