@@ -1,13 +1,13 @@
 <br />
 <p align="center">
-  <img src="assets/logo.svg" alt="Crypto.org Chain" width="400">
+  <img src="assets/logo.svg" alt="Cronos POS Chain" width="400">
 </p>
 <br />
 
 <p align="center">
   <a href="https://github.com/crypto-org-chain/chain-main/actions/workflows/build.yml"><img label="Build Status" src="https://github.com/crypto-org-chain/chain-main/actions/workflows/build.yml/badge.svg" /></a>
   <a href="https://codecov.io/gh/crypto-org-chain/chain-main"><img label="Code Coverage" src="https://codecov.io/gh/crypto-org-chain/chain-main/branch/master/graph/badge.svg" /></a>
-  <a href="https://discord.gg/pahqHz26q4"><img label="Discord" src="https://img.shields.io/discord/783264383978569728.svg?color=7289da&label=Crypto.org%20Chain&logo=discord&style=flat-square" /></a>
+  <a href="https://discord.gg/pahqHz26q4"><img label="Discord" src="https://img.shields.io/discord/783264383978569728.svg?color=7289da&label=Cronos.org%20Chain&logo=discord&style=flat-square" /></a>
 </p>
 
 ## Table of Contents
@@ -29,14 +29,15 @@
   - [quick start](#quick-start)
   - [get status](#get-status)
   - [stop all](#stop-all)
-- [10. Useful links](#10-useful-links)
+- [10. Compile with RocksDB](#10-rocksdb)
+- [11. Useful links](#10-useful-links)
 
 <a id="description" />
 
 ## 1. Description
 
-**Crypto.org Chain** is a blockchain application built using Cosmos SDK and Tendermint,
-intended as a backbone for some of the existing and future Crypto.org ecosystem.
+**Cronos POS Chain** is a blockchain application built using Cosmos SDK and Tendermint,
+intended as a backbone for some of the existing and future Cronos ecosystem.
 
 <a id="contributing" />
 
@@ -55,7 +56,7 @@ and the [contributing guidelines](CONTRIBUTING.md) when submitting code.
 
 ## 4. Documentation
 
-Technical documentation can be found in this [Github repository](https://github.com/crypto-org-chain/chain-docs) (you can read it in [this hosted version](https://crypto.org/docs)).
+Technical documentation can be found in this [Github repository](https://github.com/crypto-org-chain/chain-docs) (you can read it in [this hosted version](https://docs.cronos-pos.org/)).
 
 <a id="build" />
 
@@ -106,13 +107,13 @@ $ cachix use crypto-org-chain
 
 ## 6. Start a local Development Network and Node
 
-Please follow this [documentation](https://crypto.org/docs/getting-started/local-devnet.html#devnet-running-latest-development-node) to run a local devnet.
+Please follow this [documentation](https://docs.cronos-pos.org/for-node-hosts/getting-started) to run a local devnet.
 
 <a id="send-first-transaction" />
 
 ## 7. Send Your First Transaction
 
-After setting the local devnet, you may interact with your local blockchain by following this [documentation](https://crypto.org/docs/getting-started/local-devnet.html#interact-with-the-chain).
+After setting the local devnet, you may interact with your local blockchain by following this [documentation](https://docs.cronos-pos.org/for-node-hosts/getting-started/local-devnet#interact-with-the-chain).
 
 <a id="testing" />
 
@@ -122,7 +123,7 @@ There are different tests that can be executed in the following ways:
 
 - unit tests: `make test`
 - simulations: `make test-sim-*` (e.g. `make test-sim-nondeterminism`)
-- integrations tests: `make nix-integration-test` (see more details in [their documentation](integration_tests/README.md))
+- integration tests: `make nix-integration-test` (see more details in [their documentation](integration_tests/README.md))
 
 <a id="pystarport" />
 
@@ -181,14 +182,36 @@ pystarport supervisorctl stop all
 
 ---
 
+<a id="rocksdb" />
+
+## 10. Compile with RocksDB
+
+Install rocksDB
+```
+nix profile install -f ./nix rocksdb
+```
+
+Set in path
+
+```
+export PKG_CONFIG_PATH=$HOME/.nix-profile/lib/pkgconfig 
+export CGO_CFLAGS="$(pkg-config --cflags rocksdb)" CGO_LDFLAGS="$(pkg-config --libs rocksdb)"
+```
+
+Enable rocksdb in compilation option
+
+```
+export COSMOS_BUILD_OPTIONS=rocksdb
+```
+
 <a id="useful-links" />
 
-## 10. Useful links
+## 11. Useful links
 
-- [Project Website](http://crypto.org/)
-- [Technical Documentation](http://crypto.org/docs)
-- Community chatrooms (non-technical): [Discord](https://discord.gg/nsp9JTC) [Telegram](https://t.me/CryptoComOfficial)
-- Developer community channel (technical): [![Support Server](https://img.shields.io/discord/783264383978569728.svg?color=7289da&label=Crypto.org%20Chain&logo=discord&style=flat-square)](https://discord.gg/pahqHz26q4)
+- [Project Website](https://cronos-pos.org/)
+- [Technical Documentation](https://docs.cronos-pos.org/)
+- Community chatrooms (non-technical): [Discord](https://discord.gg/MkvPzvP5), [Telegram](https://t.me/Cronos_Announcements)
+- Developer community channel (technical): [![Support Server](https://img.shields.io/discord/783264383978569728.svg?color=7289da&label=Cronos.org%20Chain&logo=discord&style=flat-square)](https://discord.gg/pahqHz26q4)
 
 - [Cosmos SDK documentation](https://docs.cosmos.network)
 - [Cosmos Discord](https://discord.gg/W8trcGV)
