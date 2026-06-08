@@ -8,6 +8,8 @@ COMMIT := $(shell git log -1 --format='%H')
 NETWORK ?= mainnet
 COVERAGE ?= coverage.txt
 BUILDDIR ?= $(CURDIR)/build
+GO_DEFAULT_TOOLDIR := $(shell go env GOTOOLDIR 2>/dev/null)
+COVDATA_GOTOOLDIR ?= $(GO_DEFAULT_TOOLDIR)
 LEDGER_ENABLED ?= true
 
 export GO111MODULE = on
@@ -50,7 +52,7 @@ endif
 # handle rocksdb
 ifeq (rocksdb,$(findstring rocksdb,$(COSMOS_BUILD_OPTIONS)))
   CGO_ENABLED=1
-  BUILD_TAGS += rocksdb
+  BUILD_TAGS += rocksdb grocksdb_clean_link
 endif
 # handle boltdb
 ifeq (boltdb,$(findstring boltdb,$(COSMOS_BUILD_OPTIONS)))
@@ -76,7 +78,7 @@ ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=crypto-org-chain-chain \
 	-X github.com/cosmos/cosmos-sdk/version.AppName=chain-maind \
 	-X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
 	-X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT) \
-	-X github.com/tendermint/tendermint/version.TMCoreSemVer=$(TMVERSION) \
+	-X github.com/cometbft/cometbft/version.TMCoreSemVer=$(TMVERSION) \
 	-X "github.com/cosmos/cosmos-sdk/version.BuildTags=$(build_tags_comma_sep)"
 
 ifeq (,$(findstring nostrip,$(COSMOS_BUILD_OPTIONS)))
@@ -100,7 +102,7 @@ TEST_FLAGS := -tags "$(test_tags)"
 
 TESTNET_FLAGS ?=
 
-SIMAPP = github.com/crypto-org-chain/chain-main/v4/app
+SIMAPP = github.com/crypto-org-chain/chain-main/v8/app
 BINDIR ?= ~/go/bin
 
 OS := $(shell uname)
@@ -140,9 +142,57 @@ go.sum: go.mod
 		@echo "--> Ensure dependencies have not been modified"
 		GO111MODULE=on go mod verify
 
-test: check-network
+test: check-network covdata
 	@go test $(TEST_FLAGS) -v -mod=readonly $(PACKAGES) -coverprofile=$(COVERAGE) -covermode=atomic
 .PHONY: test
+
+covdata:
+	@toolDir="$(COVDATA_GOTOOLDIR)"; \
+	defaultToolDir="$(GO_DEFAULT_TOOLDIR)"; \
+	if [ -z "$$toolDir" ]; then \
+		toolDir="$$defaultToolDir"; \
+	fi; \
+	if [ -z "$$toolDir" ]; then \
+		echo "unable to determine Go tool directory; set COVDATA_GOTOOLDIR"; \
+		exit 1; \
+	fi; \
+	if [ "$$toolDir" != "$$defaultToolDir" ]; then \
+		echo "--> installing covdata into $$toolDir (Go currently uses $$defaultToolDir)"; \
+	fi; \
+	if [ ! -d "$$toolDir" ]; then \
+		echo "--> Go tool directory $$toolDir is missing"; \
+		exit 1; \
+	fi; \
+	if [ ! -x "$$toolDir/covdata" ]; then \
+		if [ ! -w "$$toolDir" ]; then \
+			echo "--> $$toolDir is not writable; install Go into a writable location or grant access before running make covdata"; \
+			exit 1; \
+		fi; \
+		echo "--> building go tool covdata"; \
+		goRoot=$$(go env GOROOT); \
+		if [ -z "$$goRoot" ]; then \
+			echo "go env GOROOT returned empty value"; \
+			exit 1; \
+		fi; \
+		if [ ! -d "$$goRoot/src/cmd/covdata" ]; then \
+			echo "cannot find covdata sources under $$goRoot/src/cmd/covdata"; \
+			exit 1; \
+		fi; \
+		tmpFile=$$(mktemp "$$toolDir/covdata.XXXXXX"); \
+		if (cd "$$goRoot/src/cmd/covdata" && go build -trimpath -o "$$tmpFile"); then \
+			: ; \
+		else \
+			rm -f "$$tmpFile"; \
+			exit 1; \
+		fi; \
+		mv "$$tmpFile" "$$toolDir/covdata"; \
+		chmod +x "$$toolDir/covdata"; \
+	fi
+.PHONY: covdata
+
+lint-install:
+	@echo "--> Installing golangci-lint $(golangci_version)"
+	@nix profile install -f ./nix golangci-lint
 
 # look into .golangci.yml for enabling / disabling linters
 lint:
@@ -150,13 +200,26 @@ lint:
 	@golangci-lint run
 	@go mod verify
 	@flake8 --show-source --count --statistics
-	@find . -name "*.nix" -type f | xargs nixpkgs-fmt --check
+	@find . -name "*.nix" -type f -not -path "./vendor/*" | xargs nixfmt -c
+
+
+lint-fix:
+	@echo "--> Running linter"
+	@golangci-lint run --fix
+	@go mod verify
+	@black --line-length 88 integration_tests/
+	@flake8 --show-source --count --statistics
+	@find . -name "*.nix" -type f -not -path "./vendor/*" | xargs nixfmt -c
 
 # a trick to make all the lint commands execute, return error when at least one fails.
 # golangci-lint is run in standalone job in ci
 lint-ci:
 	@echo "--> Running linter for CI"
 	@nix-shell --pure -E "with (import ./nix {}); mkShell { buildInputs = [lint-ci]; }" --run lint-ci
+
+vulncheck: $(BUILDDIR)/
+	GOBIN=$(BUILDDIR) go install golang.org/x/vuln/cmd/govulncheck@latest
+	$(BUILDDIR)/govulncheck ./...
 
 test-sim-nondeterminism: check-network
 	@echo "Running non-determinism test..."
@@ -220,7 +283,7 @@ make-proto:
 ###############################################################################
 # nix installation: https://nixos.org/download.html
 nix-integration-test: check-network make-proto
-	nix-shell ./integration_tests/shell.nix --run "pytest -v -m 'not upgrade and not ledger and not slow and not ibc and not byzantine and not gov and not grpc and not solomachine'"
+	nix-shell ./integration_tests/shell.nix --run "pytest -v -m 'not upgrade and not ledger and not slow and not ibc and not byzantine and not gov and not grpc and not solomachine and not hybrid and not tieredrewards'"
 
 nix-integration-test-solomachine: check-network
 	nix-shell ./integration_tests/shell.nix --run "pytest -v -m solomachine"
@@ -231,10 +294,21 @@ nix-integration-test-upgrade: check-network
 nix-integration-test-ledger: check-network 
 	nix-shell ./integration_tests/shell.nix --run "pytest -v -m ledger"
 
-nix-integration-test-slow: check-network 
+nix-integration-test-slow: check-network
 	nix-shell ./integration_tests/shell.nix --run "pytest -v -m slow"
 
-nix-integration-test-ibc: check-network 
+nix-integration-test-slow-a: check-network
+	nix-shell ./integration_tests/shell.nix --run "pytest -v -m slow integration_tests/test_slashing.py integration_tests/test_tieredrewards_msgs.py"
+
+nix-integration-test-slow-b: nix-integration-test-slow-b1 nix-integration-test-slow-b2
+
+nix-integration-test-slow-b1: check-network
+	nix-shell ./integration_tests/shell.nix --run "pytest -v -m slow_b1"
+
+nix-integration-test-slow-b2: check-network
+	nix-shell ./integration_tests/shell.nix --run "pytest -v -m slow_b2"
+
+nix-integration-test-ibc: check-network
 	nix-shell ./integration_tests/shell.nix --run "pytest -v -m ibc"
 
 nix-integration-test-byzantine: check-network
@@ -242,6 +316,15 @@ nix-integration-test-byzantine: check-network
 
 nix-integration-test-gov: check-network 
 	nix-shell ./integration_tests/shell.nix --run "pytest -v -m gov"
+
+nix-integration-test-inflation: check-network 
+	nix-shell ./integration_tests/shell.nix --run "pytest -v -m inflation"	
+
+nix-integration-test-base-rewards: check-network
+	nix-shell ./integration_tests/shell.nix --run "pytest -v -m base_rewards"
+
+nix-integration-test-tieredrewards: check-network
+	nix-shell ./integration_tests/shell.nix --run "pytest -v -m 'tieredrewards and not slow'"
 
 nix-integration-test-grpc: check-network make-proto
 	nix-shell ./integration_tests/shell.nix --run "pytest -v -m grpc"
@@ -270,7 +353,7 @@ endif
 
 check-os:
 ifeq ($(OS), Darwin)
-ifneq ("$(wildcard ~/.nix/remote-build-env))","")
+ifneq ($(wildcard $(HOME)/.nix/remote-build-env),)
 	@echo "installed nix-remote-builder before" && \
 	docker run --restart always --name nix-docker -d -p 3022:22 lnl7/nix:ssh 2> /dev/null || echo "nix-docker is already running"
 else

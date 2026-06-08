@@ -1,4 +1,5 @@
 FROM alpine:3.19.3
+FROM alpine:3.16.9
 
 RUN apk update && \
     apk upgrade && \

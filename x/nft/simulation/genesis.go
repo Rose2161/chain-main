@@ -1,5 +1,5 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package simulation
 
 import (
@@ -8,10 +8,10 @@ import (
 	"math/rand"
 	"strings"
 
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/types"
+
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/types"
 )
 
 const (
