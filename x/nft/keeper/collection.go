@@ -1,18 +1,19 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package keeper
 
 import (
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/exported"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	sdkerrors "cosmossdk.io/errors"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
+	"cosmossdk.io/store/prefix"
+	storetypes "cosmossdk.io/store/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
-
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/exported"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/types"
 )
 
 // SetGenesisCollection saves all NFTs and returns an error if there already exists or any one of the owner's bech32
@@ -74,7 +75,7 @@ func (k Keeper) GetPaginateCollection(ctx sdk.Context, request *types.QueryColle
 	var nfts []exported.NFT
 	store := ctx.KVStore(k.storeKey)
 	nftStore := prefix.NewStore(store, types.KeyNFT(denomID, ""))
-	pageRes, err := query.Paginate(nftStore, request.Pagination, func(key []byte, value []byte) error {
+	pageRes, err := query.Paginate(nftStore, request.Pagination, func(key, value []byte) error {
 		var baseNFT types.BaseNFT
 		k.cdc.MustUnmarshal(value, &baseNFT)
 		nfts = append(nfts, baseNFT)
@@ -88,9 +89,10 @@ func (k Keeper) GetPaginateCollection(ctx sdk.Context, request *types.QueryColle
 
 // GetCollections returns all the collections
 func (k Keeper) GetCollections(ctx sdk.Context) (cs []types.Collection) {
-	for _, denom := range k.GetDenoms(ctx) {
-		nfts := k.GetNFTs(ctx, denom.Id)
-		cs = append(cs, types.NewCollection(denom, nfts))
+	denoms := k.GetDenoms(ctx)
+	cs = make([]types.Collection, 0, len(denoms))
+	for _, denom := range denoms {
+		cs = append(cs, types.NewCollection(denom, k.GetNFTs(ctx, denom.Id)))
 	}
 	return cs
 }
@@ -108,7 +110,7 @@ func (k Keeper) GetTotalSupply(ctx sdk.Context, denomID string) uint64 {
 // GetTotalSupplyOfOwner returns the amount of NFTs by the specified conditions
 func (k Keeper) GetTotalSupplyOfOwner(ctx sdk.Context, id string, owner sdk.AccAddress) (supply uint64) {
 	store := ctx.KVStore(k.storeKey)
-	iterator := sdk.KVStorePrefixIterator(store, types.KeyOwner(owner, id, ""))
+	iterator := storetypes.KVStorePrefixIterator(store, types.KeyOwner(owner, id, ""))
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
 		supply++

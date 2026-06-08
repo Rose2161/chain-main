@@ -1,12 +1,12 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package nft
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/keeper"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/types"
 
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/keeper"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // InitGenesis stores the NFT genesis.

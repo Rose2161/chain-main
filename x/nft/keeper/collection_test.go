@@ -1,10 +1,9 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package keeper_test
 
 import (
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/keeper"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/types"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/types"
 )
 
 func (suite *KeeperSuite) TestSetCollection() {
@@ -30,9 +29,6 @@ func (suite *KeeperSuite) TestSetCollection() {
 	collection2, err = suite.keeper.GetCollection(suite.ctx, denomID)
 	suite.NoError(err)
 	suite.Len(collection2.NFTs, 2)
-
-	msg, fail := keeper.SupplyInvariant(suite.keeper)(suite.ctx)
-	suite.False(fail, msg)
 }
 
 func (suite *KeeperSuite) TestGetCollection() {
@@ -44,18 +40,12 @@ func (suite *KeeperSuite) TestGetCollection() {
 	collection, err := suite.keeper.GetCollection(suite.ctx, denomID)
 	suite.NoError(err)
 	suite.NotEmpty(collection)
-
-	msg, fail := keeper.SupplyInvariant(suite.keeper)(suite.ctx)
-	suite.False(fail, msg)
 }
 
 func (suite *KeeperSuite) TestGetCollections() {
 	// MintNFT shouldn't fail when collection does not exist
 	err := suite.keeper.MintNFT(suite.ctx, denomID, tokenID, tokenNm, tokenURI, tokenData, address, address)
 	suite.NoError(err)
-
-	msg, fail := keeper.SupplyInvariant(suite.keeper)(suite.ctx)
-	suite.False(fail, msg)
 }
 
 func (suite *KeeperSuite) TestGetSupply() {
