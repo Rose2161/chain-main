@@ -1,11 +1,14 @@
 package keeper
 
 import (
-	sdkerrors "cosmossdk.io/errors"
 	tmbytes "github.com/cometbft/cometbft/libs/bytes"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft-transfer/types"
+
+	sdkerrors "cosmossdk.io/errors"
+	"cosmossdk.io/store/prefix"
+	storetypes "cosmossdk.io/store/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/crypto-org-chain/chain-main/v4/x/nft-transfer/types"
 )
 
 // GetClassTrace retrieves the full identifiers trace and base classId from the store.
@@ -35,8 +38,7 @@ func (k Keeper) GetAllClassTraces(ctx sdk.Context) types.Traces {
 // and performs a callback function.
 func (k Keeper) IterateClassTraces(ctx sdk.Context, cb func(denomTrace types.ClassTrace) bool) {
 	store := ctx.KVStore(k.storeKey)
-	iterator := sdk.KVStorePrefixIterator(store, types.ClassTraceKey)
-
+	iterator := storetypes.KVStorePrefixIterator(store, types.ClassTraceKey)
 	defer iterator.Close()
 	for ; iterator.Valid(); iterator.Next() {
 		classTrace := k.MustUnmarshalClassTrace(iterator.Value())
@@ -64,7 +66,7 @@ func (k Keeper) ClassPathFromHash(ctx sdk.Context, classID string) (string, erro
 	return classTrace.GetFullClassPath(), nil
 }
 
-// HasClassTrace checks if a the key with the given denomination trace hash exists on the store.
+// HasClassTrace checks if the key with the given denomination trace hash exists on the store.
 func (k Keeper) HasClassTrace(ctx sdk.Context, denomTraceHash tmbytes.HexBytes) bool {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.ClassTraceKey)
 	return store.Has(denomTraceHash)

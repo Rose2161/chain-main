@@ -1,62 +1,14 @@
 {
     "cosmos-sdk": {
-        "branch": "v0.45.0",
+        "branch": "v0.50.13",
         "description": ":chains: A Framework for Building High Value Public Blockchains :sparkles:",
         "homepage": "https://cosmos.network/",
         "owner": "cosmos",
         "repo": "cosmos-sdk",
-        "rev": "b6c77e6c819f8a51166649eaef125d1bfb276f04",
-        "sha256": "09ns4yfxyfi7c7n5g69zv32m1rdssdl48c1akmv1y2vz6ayz4v02",
+        "rev": "7b9d2ff98d02bd5a7edd3b153dd577819cc1d777",
+        "sha256": "18wjcpww35bq21ywxnpjgirv3sqip4bwrlk50bw3lx5rz99aih4n",
         "type": "tarball",
-        "url": "https://github.com/cosmos/cosmos-sdk/archive/b6c77e6c819f8a51166649eaef125d1bfb276f04.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "gomod2nix": {
-        "branch": "master",
-        "description": "Convert applications using Go modules to Nix expressions",
-        "homepage": null,
-        "owner": "nix-community",
-        "repo": "gomod2nix",
-        "rev": "30e3c3a9ec4ac8453282ca7f67fca9e1da12c3e6",
-        "sha256": "1m0q0p1xidsp61xfrbj8ld1dqk3fhyrfifxj2ks36yjbnzmi1x69",
-        "type": "tarball",
-        "url": "https://github.com/nix-community/gomod2nix/archive/30e3c3a9ec4ac8453282ca7f67fca9e1da12c3e6.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "ibc-rs": {
-        "branch": "v1.6.0",
-        "description": "IBC modules and relayer - Formal specifications and Rust implementation",
-        "homepage": "",
-        "owner": "informalsystems",
-        "repo": "ibc-rs",
-        "rev": "1c1cf02988db67507de7d484e1a7f317fe494d6c",
-        "sha256": "08a92qw7mbag51lphxj3515i17qwsqhlam2q0g6fhldhfisa7bya",
-        "type": "tarball",
-        "url": "https://github.com/informalsystems/ibc-rs/archive/1c1cf02988db67507de7d484e1a7f317fe494d6c.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "nixpkgs": {
-        "branch": "nixpkgs-unstable",
-        "description": "Nix Packages collection",
-        "homepage": "",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "f33dd27a47ebdf11dc8a5eb05e7c8fbdaf89e73f",
-        "sha256": "1z8d4hclm483i9i9svd2bbbqww55x47il6ic1k6skfmyp5mb6h0h",
-        "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/f33dd27a47ebdf11dc8a5eb05e7c8fbdaf89e73f.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "poetry2nix": {
-        "branch": "master",
-        "description": "Convert poetry projects to nix automagically [maintainer=@adisbladis] ",
-        "homepage": "",
-        "owner": "nix-community",
-        "repo": "poetry2nix",
-        "rev": "4eb2ac54029af42a001c9901194e9ce19cbd8a40",
-        "sha256": "16fi71fpywiqsya1z99kkb14dansyrmkkrb2clzs3b5qqx673wf4",
-        "type": "tarball",
-        "url": "https://github.com/nix-community/poetry2nix/archive/4eb2ac54029af42a001c9901194e9ce19cbd8a40.tar.gz",
+        "url": "https://github.com/cosmos/cosmos-sdk/archive/7b9d2ff98d02bd5a7edd3b153dd577819cc1d777.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "flake-compat": {
@@ -69,6 +21,54 @@
         "sha256": "1qc703yg0babixi6wshn5wm2kgl5y1drcswgszh4xxzbrwkk9sv7",
         "type": "tarball",
         "url": "https://github.com/edolstra/flake-compat/archive/b4a34015c698c7793d592d66adbab377907a2be8.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "gomod2nix": {
+        "branch": "master",
+        "description": "Convert applications using Go modules to Nix expressions",
+        "homepage": null,
+        "owner": "nix-community",
+        "repo": "gomod2nix",
+        "rev": "5d387097aa716f35dd99d848dc26d8d5b62a104c",
+        "sha256": "1mdwyjz43nnh7gfq4rc54kql6fy65hw17w0p4gwklnfqciwrkax2",
+        "type": "tarball",
+        "url": "https://github.com/nix-community/gomod2nix/archive/5d387097aa716f35dd99d848dc26d8d5b62a104c.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "hermes": {
+        "branch": "v1.10.3",
+        "description": "IBC modules and relayer - Formal specifications and Rust implementation",
+        "homepage": "",
+        "owner": "informalsystems",
+        "repo": "hermes",
+        "rev": "e26d356abe23be2d401d1ba3d6ebb2768f77ebd5",
+        "sha256": "1jzhlgx2jj1pfs6v7bvcijwrhmlgvm15mxc4mmidnnm123nww7yb",
+        "type": "tarball",
+        "url": "https://github.com/informalsystems/hermes/archive/e26d356abe23be2d401d1ba3d6ebb2768f77ebd5.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixpkgs": {
+        "branch": "release-25.11",
+        "description": "Nix Packages collection",
+        "homepage": "",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "d7fed073bedb1782de1f26683422ccd5b0207cd9",
+        "sha256": "02c8sv49rb0d8vpwpa2jrrpqcg7gzynczqd4jv91fby8sqjdzl0z",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs/archive/d7fed073bedb1782de1f26683422ccd5b0207cd9.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "poetry2nix": {
+        "branch": "master",
+        "description": "Convert poetry projects to nix automagically [maintainer=@adisbladis] ",
+        "homepage": "",
+        "owner": "crypto-org-chain",
+        "repo": "poetry2nix",
+        "rev": "554a921d5cb1659880e42c0dccf322fe4b668e93",
+        "sha256": "0a40q4ib977d3cxk4lfffmv14i54dl83np630casgz7z1qd4kaij",
+        "type": "tarball",
+        "url": "https://github.com/crypto-org-chain/poetry2nix/archive/554a921d5cb1659880e42c0dccf322fe4b668e93.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
