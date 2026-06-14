@@ -1,11 +1,72 @@
+import binascii
+import hashlib
 import json
+import os
 import tempfile
+import time
 
+import durations
 import requests
 from pystarport import cluster, cosmoscli
 
 
 class CosmosCLI(cosmoscli.CosmosCLI):
+    def _event_query_tx_for_with_retry(self, txhash, attempts=3):
+        for attempt in range(attempts):
+            try:
+                return self.event_query_tx_for(txhash)
+            except Exception:
+                if attempt == attempts - 1:
+                    raise
+                time.sleep(3 * (attempt + 1))
+
+    def event_query_tx_for(self, hash):
+        try:
+            return super().event_query_tx_for(hash)
+        except Exception as ws_err:
+            # Fallback: the WebSocket event may have already been emitted
+            # before the subscription was established (race condition).
+            # Poll query tx by hash instead.
+            last_err = ws_err
+            for _ in range(10):
+                try:
+                    return json.loads(
+                        self.raw(
+                            "query",
+                            "tx",
+                            hash,
+                            home=self.data_dir,
+                            node=self.node_rpc,
+                            output="json",
+                        )
+                    )
+                except Exception as poll_err:
+                    last_err = poll_err
+                    time.sleep(0.5)
+            raise RuntimeError(
+                f"event_query_tx_for({hash!r}) failed: "
+                f"WebSocket error then all polling attempts failed"
+            ) from last_err
+
+    def tx(self, *args, wait_tx=True, **kwargs):
+        output = kwargs.get("output", "json")
+        if output != "json" and wait_tx:
+            raise Exception('wait_tx only works with output="json"')
+
+        rsp = self.raw(
+            "tx",
+            *args,
+            "-y",
+            home=self.data_dir,
+            node=self.node_rpc,
+            keyring_backend="test",
+            **kwargs,
+        )
+        if wait_tx:
+            rsp = json.loads(rsp)
+            rsp = self._event_query_tx_for_with_retry(rsp["txhash"])
+        return rsp
+
     def submit_gov_proposal(self, proposal, **kwargs):
         rsp = json.loads(
             self.raw(
@@ -19,7 +80,15 @@ class CosmosCLI(cosmoscli.CosmosCLI):
             )
         )
         if rsp["code"] == 0:
-            rsp = self.event_query_tx_for(rsp["txhash"])
+            rsp = self._event_query_tx_for_with_retry(rsp["txhash"])
+        return rsp
+
+    def gov_propose_before_cosmos_sdk_v0_46(
+        self, proposer, kind, proposal, wait_tx=True, **kwargs
+    ):
+        rsp = self.gov_propose(proposer, kind, proposal, **kwargs)
+        if rsp["code"] == 0 and wait_tx:
+            rsp = self._event_query_tx_for_with_retry(rsp["txhash"])
         return rsp
 
     def gov_propose_legacy(
@@ -28,7 +97,7 @@ class CosmosCLI(cosmoscli.CosmosCLI):
         kind,
         proposal,
         no_validate=False,
-        event_query_tx=True,
+        wait_tx=True,
         **kwargs,
     ):
         if kind == "software-upgrade":
@@ -57,9 +126,6 @@ class CosmosCLI(cosmoscli.CosmosCLI):
                     **kwargs,
                 )
             )
-            if rsp["code"] == 0 and event_query_tx:
-                rsp = self.event_query_tx_for(rsp["txhash"])
-            return rsp
         elif kind == "cancel-software-upgrade":
             rsp = json.loads(
                 self.raw(
@@ -81,9 +147,6 @@ class CosmosCLI(cosmoscli.CosmosCLI):
                     **kwargs,
                 )
             )
-            if rsp["code"] == 0 and event_query_tx:
-                rsp = self.event_query_tx_for(rsp["txhash"])
-            return rsp
         else:
             with tempfile.NamedTemporaryFile("w") as fp:
                 json.dump(proposal, fp)
@@ -105,9 +168,86 @@ class CosmosCLI(cosmoscli.CosmosCLI):
                         **kwargs,
                     )
                 )
-                if rsp["code"] == 0 and event_query_tx:
-                    rsp = self.event_query_tx_for(rsp["txhash"])
-                return rsp
+        if rsp["code"] == 0 and wait_tx:
+            rsp = self._event_query_tx_for_with_retry(rsp["txhash"])
+        return rsp
+
+    def gov_propose_since_cosmos_sdk_v0_50(
+        self,
+        proposer,
+        kind,
+        proposal,
+        wait_tx=True,
+        **kwargs,
+    ):
+        if kind == "software-upgrade":
+            rsp = json.loads(
+                self.raw(
+                    "tx",
+                    "upgrade",
+                    kind,
+                    proposal["name"],
+                    "-y",
+                    "--no-validate",
+                    from_=proposer,
+                    # content
+                    title=proposal.get("title"),
+                    summary=proposal.get("summary"),
+                    upgrade_height=proposal.get("upgrade-height"),
+                    upgrade_time=proposal.get("upgrade-time"),
+                    upgrade_info=proposal.get("upgrade-info", "info"),
+                    deposit=proposal.get("deposit"),
+                    # basic
+                    home=self.data_dir,
+                    node=self.node_rpc,
+                    keyring_backend="test",
+                    chain_id=self.chain_id,
+                    **kwargs,
+                )
+            )
+        elif kind == "cancel-software-upgrade":
+            rsp = json.loads(
+                self.raw(
+                    "tx",
+                    "upgrade",
+                    kind,
+                    "-y",
+                    from_=proposer,
+                    # content
+                    title=proposal.get("title"),
+                    summary=proposal.get("summary"),
+                    deposit=proposal.get("deposit"),
+                    # basic
+                    home=self.data_dir,
+                    node=self.node_rpc,
+                    keyring_backend="test",
+                    chain_id=self.chain_id,
+                    **kwargs,
+                )
+            )
+        else:
+            with tempfile.NamedTemporaryFile("w") as fp:
+                json.dump(proposal, fp)
+                fp.flush()
+                rsp = json.loads(
+                    self.raw(
+                        "tx",
+                        "gov",
+                        "submit-proposal",
+                        fp.name,
+                        "-y",
+                        from_=proposer,
+                        # basic
+                        home=self.data_dir,
+                        node=self.node_rpc,
+                        keyring_backend="test",
+                        chain_id=self.chain_id,
+                        **kwargs,
+                    )
+                )
+        if rsp["code"] == 0 and wait_tx:
+            rsp = self._event_query_tx_for_with_retry(rsp["txhash"])
+        return rsp
 
     def transfer(
         self,
@@ -115,7 +255,7 @@ class CosmosCLI(cosmoscli.CosmosCLI):
         to,
         coins,
         generate_only=False,
-        event_query_tx=True,
+        wait_tx=True,
         **kwargs,
     ):
         default_kwargs = {
@@ -137,8 +277,8 @@ class CosmosCLI(cosmoscli.CosmosCLI):
                 **(default_kwargs | kwargs),
             )
         )
-        if not generate_only and rsp["code"] == 0 and event_query_tx:
-            rsp = self.event_query_tx_for(rsp["txhash"])
+        if not generate_only and rsp["code"] == 0 and wait_tx:
+            rsp = self._event_query_tx_for_with_retry(rsp["txhash"])
         return rsp
 
     def sign_tx(self, tx_file, signer):
@@ -168,21 +308,21 @@ class CosmosCLI(cosmoscli.CosmosCLI):
             fp.flush()
             return self.sign_tx(fp.name, signer)
 
-    def broadcast_tx(self, tx_file, event_query_tx=True, **kwargs):
+    def broadcast_tx(self, tx_file, wait_tx=True, **kwargs):
         kwargs.setdefault("broadcast_mode", "sync")
         kwargs.setdefault("output", "json")
         rsp = json.loads(
             self.raw("tx", "broadcast", tx_file, node=self.node_rpc, **kwargs)
         )
-        if event_query_tx and rsp["code"] == 0:
-            rsp = self.event_query_tx_for(rsp["txhash"])
+        if wait_tx and rsp["code"] == 0:
+            rsp = self._event_query_tx_for_with_retry(rsp["txhash"])
         return rsp
 
-    def broadcast_tx_json(self, tx, event_query_tx=True, **kwargs):
+    def broadcast_tx_json(self, tx, wait_tx=True, **kwargs):
         with tempfile.NamedTemporaryFile("w") as fp:
             json.dump(tx, fp)
             fp.flush()
-            return self.broadcast_tx(fp.name, event_query_tx, **kwargs)
+            return self.broadcast_tx(fp.name, wait_tx, **kwargs)
 
     def tx_search_rpc(self, events: str):
         node_rpc_http = "http" + self.node_rpc.removeprefix("tcp")
@@ -241,13 +381,129 @@ class CosmosCLI(cosmoscli.CosmosCLI):
             "node": self.node_rpc,
             "output": "json",
         }
-        return json.loads(
+        res = json.loads(
             self.raw(
                 "q",
                 mod,
                 "params",
                 **kwargs,
             )
+        )
+        res = res.get("params") or res
+        return res
+
+    def ica_submit_tx(
+        self,
+        connid,
+        tx,
+        timeout_duration="1h",
+        event_query_tx=True,
+        **kwargs,
+    ):
+        default_kwargs = {
+            "home": self.data_dir,
+            "node": self.node_rpc,
+            "chain_id": self.chain_id,
+            "keyring_backend": "test",
+        }
+        args = ["ica", "controller", "send-tx"]
+
+        duration_args = []
+        if timeout_duration:
+            timeout = int(durations.Duration(timeout_duration).to_seconds() * 1e9)
+            duration_args = ["--packet-timeout-timestamp", timeout]
+
+        rsp = json.loads(
+            self.raw(
+                "tx",
+                *args,
+                connid,
+                tx,
+                *duration_args,
+                "-y",
+                **(default_kwargs | kwargs),
+            )
+        )
+        if rsp["code"] == 0 and event_query_tx:
+            rsp = self._event_query_tx_for_with_retry(rsp["txhash"])
+        return rsp
+
+    def ibc_denom_trace(self, path, node):
+        denom_hash = hashlib.sha256(path.encode()).hexdigest().upper()
+        return json.loads(
+            self.raw(
+                "q",
+                "ibc-transfer",
+                "denom",
+                denom_hash,
+                node=node,
+                output="json",
+            )
+        )["denom"]
+
+    # This method is deprecated after Cosmos SDK v0.50.0
+    # x/params query subspace is deprecated after Cosmos SDK v0.50.0
+    def query_params_subspace(self, subspace, param):
+        kwargs = {
+            "node": self.node_rpc,
+            "output": "json",
+        }
+        res = json.loads(
+            self.raw(
+                "q",
+                "params",
+                "subspace",
+                subspace,
+                param,
+                **kwargs,
+            )
+        )
+
+        res = res.get("value") or res
+        return res
+
+    def changeset_dump(self, changeset_dir, **kwargs):
+        default_kwargs = {
+            "home": self.data_dir,
+        }
+        return self.raw(
+            "changeset", "dump", changeset_dir, **(default_kwargs | kwargs)
+        ).decode()
+
+    def changeset_verify(self, changeset_dir, **kwargs):
+        output = self.raw("changeset", "verify", changeset_dir, **kwargs).decode()
+        hash, commit_info = output.split("\n")
+        return binascii.unhexlify(hash), json.loads(commit_info)
+
+    def changeset_restore_app_db(self, snapshot_dir, app_db, **kwargs):
+        return self.raw(
+            "changeset", "restore-app-db", snapshot_dir, app_db, **kwargs
+        ).decode()
+
+    def changeset_build_versiondb_sst(self, changeset_dir, sst_dir, **kwargs):
+        return self.raw(
+            "changeset", "build-versiondb-sst", changeset_dir, sst_dir, **kwargs
+        ).decode()
+
+    def changeset_ingest_versiondb_sst(self, versiondb_dir, sst_dir, **kwargs):
+        sst_files = [os.path.join(sst_dir, name) for name in os.listdir(sst_dir)]
+        return self.raw(
+            "changeset",
+            "ingest-versiondb-sst",
+            versiondb_dir,
+            *sst_files,
+            "--move-files",
+            **kwargs,
+        ).decode()
+
+    def restore_versiondb(self, height, format=3):
+        return self.raw(
+            "changeset", "restore-versiondb", height, format, home=self.data_dir
+        )
+
+    def changeset_fixdata(self, versiondb_dir, dry_run=False):
+        return self.raw(
+            "changeset", "fixdata", versiondb_dir, "--dry-run" if dry_run else None
         )
 
 
@@ -266,8 +522,18 @@ class ClusterCLI(cluster.ClusterCLI):
             zemu_button_port=self.zemu_button_port,
         )
 
+    def tx(self, *args, i=0, wait_tx=True, **kwargs):
+        return self.cosmos_cli(i).tx(*args, wait_tx, **kwargs)
+
     def submit_gov_proposal(self, proposer, i=0, **kwargs):
         return self.cosmos_cli(i).submit_gov_proposal(proposer, **kwargs)
+
+    def gov_propose_before_cosmos_sdk_v0_46(
+        self, proposer, kind, proposal, i=0, wait_tx=True, **kwargs
+    ):
+        return self.cosmos_cli(i).gov_propose_before_cosmos_sdk_v0_46(
+            proposer, kind, proposal, wait_tx, **kwargs
+        )
 
     def gov_propose_legacy(
         self,
@@ -276,7 +542,7 @@ class ClusterCLI(cluster.ClusterCLI):
         proposal,
         i=0,
         no_validate=False,
-        event_query_tx=True,
+        wait_tx=True,
         **kwargs,
     ):
         return self.cosmos_cli(i).gov_propose_legacy(
@@ -284,7 +550,22 @@ class ClusterCLI(cluster.ClusterCLI):
             kind,
             proposal,
             no_validate,
-            event_query_tx,
+            wait_tx,
+            **kwargs,
+        )
+
+    def gov_propose_since_cosmos_sdk_v0_50(
+        self,
+        proposer,
+        kind,
+        proposal,
+        i=0,
+        **kwargs,
+    ):
+        return self.cosmos_cli(i).gov_propose_since_cosmos_sdk_v0_50(
+            proposer,
+            kind,
+            proposal,
             **kwargs,
         )
 
@@ -299,3 +580,8 @@ class ClusterCLI(cluster.ClusterCLI):
 
     def query_params(self, mod, i=0):
         return self.cosmos_cli(i).query_params(mod)
+
+    # This method is deprecated after Cosmos SDK v0.50.0
+    # x/params query subspace is deprecated after Cosmos SDK v0.50.0
+    def query_params_subspace(self, subspace, param, i=0):
+        return self.cosmos_cli(i).query_params_subspace(subspace, param)

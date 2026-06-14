@@ -1,5 +1,5 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package types
 
 import (
@@ -14,6 +14,7 @@ const (
 	MinDenomLen = 3
 	MaxDenomLen = 64
 	IBCDenomLen = 68
+	IBCPrefix   = "ibc/"
 
 	MaxTokenURILen = 256
 )
@@ -25,7 +26,7 @@ var (
 	IsBeginWithAlpha = regexp.MustCompile(`^[a-z].*`).MatchString
 )
 
-// ValidateDenomID verifies whether the  parameters are legal
+// ValidateDenomID verifies whether the parameters are legal.
 func ValidateDenomID(denomID string) error {
 	if len(denomID) < MinDenomLen || len(denomID) > MaxDenomLen {
 		return sdkerrors.Wrapf(ErrInvalidDenom, "the length of denom(%s) only accepts value [%d, %d]", denomID, MinDenomLen, MaxDenomLen)
@@ -36,9 +37,9 @@ func ValidateDenomID(denomID string) error {
 	return nil
 }
 
-// ValidateDenomIDWithIBC verifies whether the  parameters are legal and considers IBC denom IDs when checking
+// ValidateDenomIDWithIBC verifies whether the parameters are legal and considers IBC denom IDs when checking.
 func ValidateDenomIDWithIBC(denomID string) error {
-	if strings.HasPrefix(denomID, "ibc/") {
+	if strings.HasPrefix(denomID, IBCPrefix) {
 		if len(denomID) != IBCDenomLen {
 			return sdkerrors.Wrapf(ErrInvalidDenom, "the length of ibc denom(%s) only accepts value [%d]", denomID, IBCDenomLen)
 		}
@@ -49,7 +50,7 @@ func ValidateDenomIDWithIBC(denomID string) error {
 	return ValidateDenomID(denomID)
 }
 
-// ValidateDenomName verifies whether the  parameters are legal
+// ValidateDenomName verifies whether the parameters are legal.
 func ValidateDenomName(denomName string) error {
 	denomName = strings.TrimSpace(denomName)
 	if len(denomName) == 0 {

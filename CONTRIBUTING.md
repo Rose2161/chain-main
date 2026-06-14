@@ -1,7 +1,7 @@
 # Contributing
 
-Thank you for your interest in contributing to Chain! The goal of the chain-main repository is to develop the implementation
-of Crypto.org Chain to best power its network use cases in payments, finance and digital assets.
+Thank you for your interest in contributing to the Cronos POS Chain! The goal of the chain-main repository is to develop the implementation
+of Cronos POS Chain to best power its network use cases in payments, finance and digital assets.
 Good places to start are this document and [the official documentation](https://github.com/crypto-org-chain/chain-docs). If you have any questions, feel free to ask on [Discord](https://discord.gg/pahqHz26q4).
 
 All work on the code base tries to adhere to the "Development Process" described in [The Collective Code Construction Contract (C4)](https://rfc.zeromq.org/spec/42/#24-development-process).
@@ -26,7 +26,7 @@ we ask you to refer to [security policy](SECURITY.md).
 ## Consensus-breaking and large structural code changes
 
 When the issue is well understood but the solution leads to a consensus-breaking change (i.e. a need for the network-wide upgrade coordination) or large structural changes to the code base, these changes should be proposed in the form of an Architectural Decision Record
-([ADR](https://github.com/crypto-org-chain/chain-main/blob/master/docs/architecture/README.md)). The ADR will help build consensus on an overall strategy to ensure the code base maintains coherence in the larger context. If you are not comfortable with writing an ADR, you can open a less-formal issue and the maintainers will help you turn it into an ADR.
+([ADR](https://github.com/crypto-org-chain/chain-main/blob/master/doc/architecture/README.md)). The ADR will help build consensus on an overall strategy to ensure the code base maintains coherence in the larger context. If you are not comfortable with writing an ADR, you can open a less-formal issue and the maintainers will help you turn it into an ADR.
 
 ## Working on issues
 There are several ways to identify an area where you can contribute to Chain:
