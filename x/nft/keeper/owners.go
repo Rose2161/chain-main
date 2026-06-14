@@ -1,17 +1,19 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package keeper
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/crypto-org-chain/chain-main/v8/x/nft/types"
 
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/types"
+	storetypes "cosmossdk.io/store/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // GetOwner gets all the ID collections owned by an address and denom ID
 func (k Keeper) GetOwner(ctx sdk.Context, address sdk.AccAddress, denom string) (types.Owner, error) {
 	store := ctx.KVStore(k.storeKey)
-	iterator := sdk.KVStorePrefixIterator(store, types.KeyOwner(address, denom, ""))
+	iterator := storetypes.KVStorePrefixIterator(store, types.KeyOwner(address, denom, ""))
 	defer iterator.Close()
 
 	owner := types.Owner{
@@ -47,7 +49,7 @@ func (k Keeper) GetOwner(ctx sdk.Context, address sdk.AccAddress, denom string) 
 // GetOwners gets all the ID collections
 func (k Keeper) GetOwners(ctx sdk.Context) (owners types.Owners, err error) {
 	store := ctx.KVStore(k.storeKey)
-	iterator := sdk.KVStoreReversePrefixIterator(store, types.KeyOwner(nil, "", ""))
+	iterator := storetypes.KVStoreReversePrefixIterator(store, types.KeyOwner(nil, "", ""))
 	defer iterator.Close()
 
 	idcsMap := make(map[string]types.IDCollections)

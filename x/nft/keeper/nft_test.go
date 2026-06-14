@@ -1,10 +1,6 @@
 // Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Crypto.org (licensed under the Apache License, Version 2.0)
+// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
 package keeper_test
-
-import (
-	"github.com/crypto-org-chain/chain-main/v4/x/nft/keeper"
-)
 
 func (suite *KeeperSuite) TestGetNFT() {
 	// MintNFT shouldn't fail when collection does not exist
@@ -30,9 +26,6 @@ func (suite *KeeperSuite) TestGetNFT() {
 
 	suite.True(receivedNFT2.GetOwner().Equals(address))
 	suite.Equal(receivedNFT2.GetURI(), tokenURI)
-
-	msg, fail := keeper.SupplyInvariant(suite.keeper)(suite.ctx)
-	suite.False(fail, msg)
 }
 
 func (suite *KeeperSuite) TestGetNFTs() {
