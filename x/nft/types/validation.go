@@ -1,8 +1,8 @@
-// Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
+// Cronos.com Chain Copyright 2018-present Cronos.com
 package types
 
 import (
+	"encoding/hex"
 	"regexp"
 	"strings"
 
@@ -42,6 +42,9 @@ func ValidateDenomIDWithIBC(denomID string) error {
 	if strings.HasPrefix(denomID, IBCPrefix) {
 		if len(denomID) != IBCDenomLen {
 			return sdkerrors.Wrapf(ErrInvalidDenom, "the length of ibc denom(%s) only accepts value [%d]", denomID, IBCDenomLen)
+		}
+		if _, err := hex.DecodeString(denomID[len(IBCPrefix):]); err != nil {
+			return sdkerrors.Wrapf(ErrInvalidDenom, "the hash of ibc denom(%s) must be valid hex", denomID)
 		}
 
 		return nil

@@ -1,5 +1,4 @@
-// Copyright (c) 2016-2021 Shanghai Bianjie AI Technology Inc. (licensed under the Apache License, Version 2.0)
-// Modifications Copyright (c) 2021-present Cronos.org (licensed under the Apache License, Version 2.0)
+// Cronos.com Chain Copyright 2018-present Cronos.com
 package types
 
 import (
@@ -19,7 +18,13 @@ func NewGenesisState(collections []Collection) *GenesisState {
 // error for any failed validation criteria.
 func ValidateGenesis(data GenesisState) error {
 	for _, c := range data.Collections {
-		if err := ValidateDenomID(c.Denom.Name); err != nil {
+		// Id is strict but IBC-aware (ibc/{hash} vouchers from x/nft-transfer);
+		// Name is free-form. Mirrors the runtime MsgIssueDenom path.
+		if err := ValidateDenomIDWithIBC(c.Denom.Id); err != nil {
+			return err
+		}
+
+		if err := ValidateDenomName(c.Denom.Name); err != nil {
 			return err
 		}
 
